@@ -1,6 +1,10 @@
-# Project name
+# UniRoom - Classroom Booking System
 
-One paragraph: what the project is.
+UniRoom is a web application for managing university
+classroom reservations.
+
+Professors can request classrooms, while administrators
+can approve or reject booking requests.
 
 ## How we work
 
@@ -17,3 +21,6 @@ One paragraph: what the project is.
 
 `.github/workflows/ci.yml` runs on every pull request. It starts empty and always passes: add
 the steps that build and test the project as soon as there is something to test.
+
+
+
