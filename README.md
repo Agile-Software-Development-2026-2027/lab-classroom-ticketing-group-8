@@ -1,12 +1,10 @@
-# Classroom Booking System
+# UniRoom - Classroom Booking System
 
-## Overview
+UniRoom is a web application for managing university
+classroom reservations.
 
-Classroom Booking System is a university project developed using the Scrum framework.
-
-The application allows professors to submit classroom booking requests and administrators to accept or reject them.
-
-The first Sprint focuses on delivering a Minimum Viable Product (MVP) with only the essential functionalities.
+Professors can request classrooms, while administrators
+can approve or reject booking requests.
 
 ## How we work
 
