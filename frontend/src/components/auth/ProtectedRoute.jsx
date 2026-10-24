@@ -2,6 +2,7 @@
 import { Navigate, Outlet } from "react-router";
 import { useAuth } from "../../contexts/useAuth";
 
+// permettere la protezione delle rotte in base al ruolo dell'utente
 export default function ProtectedRoute({ allowedRoles }) {
   const { user, profile, loading } = useAuth();
 

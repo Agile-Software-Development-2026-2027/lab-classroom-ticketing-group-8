@@ -43,3 +43,7 @@ jobs:
 
       - name: Verify build output
         run: test -f frontend/dist/index.html
+
+      - name: Run authentication tests
+        working-directory: frontend
+        run: npm run test
