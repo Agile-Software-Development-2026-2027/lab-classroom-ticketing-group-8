@@ -9,7 +9,7 @@ export default function MainLayout() {
       </header>
 
       <main>
-        <Outlet />
+        <Outlet/>
       </main>
     </>
   );
