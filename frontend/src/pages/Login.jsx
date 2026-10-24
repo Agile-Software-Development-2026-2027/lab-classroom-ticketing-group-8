@@ -1,36 +1,30 @@
+
 import { useState } from "react";
+import { useAuth } from "../contexts/useAuth";
 import { loginWithUniversityId, logout } from "../services/authService";
-import { getUserProfile } from "../services/userService";
 
 export default function Login() {
+  const { user, profile, loading: sessionLoading } = useAuth();
+
   const [universityId, setUniversityId] = useState("");
   const [password, setPassword] = useState("");
-  const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
+
     setError("");
     setLoading(true);
 
     try {
-      const id = universityId.trim();
-      const user = await loginWithUniversityId(id, password);
-      const data = await getUserProfile(user.uid);
-
-      if (data.role !== "PROFESSOR" || data.universityId !== id) {
-        throw new Error("Accesso non consentito.");
-      }
-
-      setProfile(data);
+      await loginWithUniversityId(universityId.trim(), password);
       setPassword("");
     } catch (err) {
-      await logout().catch(() => {});
       setError(
         err.message === "La matricola deve contenere 6 cifre."
           ? err.message
-          : "Accesso non riuscito. Controlla le credenziali o i permessi."
+          : "Accesso non riuscito. Controlla le credenziali."
       );
     } finally {
       setLoading(false);
@@ -38,22 +32,43 @@ export default function Login() {
   }
 
   async function handleLogout() {
+    setError("");
+
     try {
       await logout();
-      setProfile(null);
+      setPassword("");
     } catch {
       setError("Logout non riuscito.");
     }
   }
 
-  if (profile) {
+  if (sessionLoading) {
     return (
-      <main>
-        <h1>Benvenuto, {profile.displayName}</h1>
-        <p>Ruolo: {profile.role}</p>
-        <button onClick={handleLogout}>Logout</button>
+      <section>
+        <p>Verifica della sessione...</p>
+      </section>
+    );
+  }
+
+  if (user && profile) {
+    return (
+      <section>
+        {profile.role === "PROFESSOR" ? (
+          <>
+            <h1>Benvenuto, {profile.displayName}</h1>
+            <p>Matricola: {profile.universityId}</p>
+            <p>Ruolo: {profile.role}</p>
+          </>
+        ) : (
+          <p>Questa area è riservata ai professori.</p>
+        )}
+
+        <button type="button" onClick={handleLogout}>
+          Logout
+        </button>
+
         {error && <p role="alert">{error}</p>}
-      </main>
+      </section>
     );
   }
 
@@ -66,9 +81,11 @@ export default function Login() {
           Matricola
           <input
             value={universityId}
-            onChange={(e) => setUniversityId(e.target.value)}
+            onChange={(event) => setUniversityId(event.target.value)}
             placeholder="6 cifre"
+            inputMode="numeric"
             maxLength={6}
+            autoComplete="username"
             required
           />
         </label>
@@ -78,7 +95,8 @@ export default function Login() {
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
             required
           />
         </label>
