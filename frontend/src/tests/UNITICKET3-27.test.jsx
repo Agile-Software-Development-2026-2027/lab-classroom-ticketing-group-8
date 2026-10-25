@@ -142,6 +142,15 @@ describe("UNITICKET3-27 - Header e navigazione", () => {
     ).toBeTruthy();
   });
 
+// In questo test logout() è simulato e non cancella la sessione:
+// ProtectedRoute continua a considerare l'utente autenticato,
+// quindi il pulsante esegue navigate("/") e mostra la Home.
+//
+// Nell'app reale Firebase aggiorna la sessione dopo il logout.
+// Se l'utente si trova nell'area personale, ProtectedRoute può
+// reindirizzarlo al Login prima che termini la navigazione
+// alla Home avviata dal pulsante.
+//comportamento testato manualmente
   it("chiama il servizio di logout dall'area personale e torna alla home", async () => {
     renderPage("/personal-area", true);
 
