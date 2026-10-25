@@ -63,10 +63,14 @@ export default function Login() {
             </div>
           ) : user && profile ? (
             <div className="ur-session">
-              {profile.role === "PROFESSOR" ? (
+              {["PROFESSOR", "ADMIN"].includes(profile.role) ? (
                 <div className="ur-session-details">
                   <p>Benvenuto, {profile.displayName}</p>
                   <p>Matricola: {profile.universityId}</p>
+
+                  {profile.role === "ADMIN" && (
+                    <p>Ruolo: Amministratore</p>
+                  )}
                 </div>
               ) : (
                 <p className="ur-message ur-message-error" role="alert">
