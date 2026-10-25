@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -43,11 +43,23 @@ jobs:
 
       - name: Verify build output
         run: test -f frontend/dist/index.html
+        
+  auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
 
+      - uses: actions/checkout@v4
       - name: Run authentication tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-16.test.jsx
-
+  
+  home_navigation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      
+      - uses: actions/checkout@v4
       - name: Run home navigation test
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-27.test.jsx
