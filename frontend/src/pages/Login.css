@@ -3,6 +3,22 @@ body:has(.ur-auth) {
   margin: 0;
 }
 
+.ur-back-home {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  z-index: 1;
+  color: #607286;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.ur-back-home:hover {
+  color: #b71e24;
+}
+
 .ur-auth {
   --ur-red: #b71e24;
   --ur-red-hover: #98181e;

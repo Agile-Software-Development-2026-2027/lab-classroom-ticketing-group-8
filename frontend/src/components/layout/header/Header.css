@@ -1,0 +1,67 @@
+.app-header {
+  background: #ffffff;
+  border-bottom: 5px solid var(--ur-red);
+
+  box-shadow: 0 6px 22px rgba(30, 40, 55, 0.06);
+}
+
+.app-header-inner {
+  box-sizing: border-box;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.app-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  color: var(--ur-text);
+  text-decoration: none;
+}
+
+.app-header-logo {
+  display: block;
+  flex-shrink: 0;
+
+  width: 96px;
+  height: 96px;
+
+  object-fit: contain;
+}
+
+.app-header-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
+}
+
+.app-header-brand:focus-visible {
+  outline: 3px solid var(--ur-red);
+  outline-offset: 6px;
+  border-radius: 6px;
+}
+
+@media (max-width: 600px) {
+  .app-header-inner {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .app-header-logo {
+    width: 76px;
+    height: 76px;
+  }
+
+  .app-header-title {
+    font-size: 28px;
+  }
+}

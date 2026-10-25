@@ -1,0 +1,14 @@
+:root {
+  --ur-red: #b71e24;
+  --ur-red-hover: #98181e;
+  --ur-text: #252528;
+  --ur-muted: #607286;
+
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f5f6f8;
+  color: var(--ur-text);
+}

@@ -9,7 +9,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter } from "react-router";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -21,9 +21,7 @@ import { auth, db } from "../firebase/client";
 import { loginWithUniversityId, logout } from "../services/authService";
 import { getUserProfile } from "../services/userService";
 import { AuthProvider } from "../contexts/AuthContext";
-import Login from "../pages/Login";
-import ProtectedRoute from "../components/auth/ProtectedRoute";
-
+import App from "../App";
 // Firebase mock: nessuna connessione al database reale.
 vi.mock("../firebase/client", () => ({
   auth: { test: "auth" },
@@ -83,18 +81,7 @@ function renderWithAuth({
   return render(
     <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-
-          <Route
-            element={<ProtectedRoute allowedRoles={["PROFESSOR"]} />}
-          >
-            <Route
-              path="/professor"
-              element={<h1>Pagina protetta di test</h1>}
-            />
-          </Route>
-        </Routes>
+        <App />
       </AuthProvider>
     </MemoryRouter>
   );
@@ -354,7 +341,7 @@ describe("UNITICKET3-16 - Login e sessione", () => {
     ).toBeNull();
   });
 
-  it("dopo il login mostra nome, matricola e Logout", async () => {
+  it("dopo il login torna alla home con Logout e Area personale", async () => {
     vi.mocked(signInWithEmailAndPassword)
       .mockImplementation(async () => {
         await emitAuthState(professorUser);
@@ -372,15 +359,15 @@ describe("UNITICKET3-16 - Login e sessione", () => {
     );
 
     expect(
-      await screen.findByRole("button", { name: "Logout" })
+      await screen.findByRole("heading", { name: "Home" })
     ).toBeTruthy();
 
     expect(
-      screen.getByText("Benvenuto, Professore Test")
+      screen.getByRole("button", { name: "Logout" })
     ).toBeTruthy();
 
     expect(
-      screen.getByText("Matricola: 100001")
+      screen.getByRole("link", { name: "Area personale" })
     ).toBeTruthy();
 
     expect(
@@ -392,17 +379,17 @@ describe("UNITICKET3-16 - Login e sessione", () => {
     renderWithAuth({ currentUser: professorUser });
 
     expect(
-      await screen.findByRole("button", { name: "Logout" })
+      await screen.findByRole("heading", { name: "Home" })
     ).toBeTruthy();
 
     expect(
-      screen.getByText("Matricola: 100001")
+      screen.getByRole("button", { name: "Logout" })
     ).toBeTruthy();
 
     expect(getDoc).toHaveBeenCalled();
   });
 
-  it("dopo il logout torna al form", async () => {
+  it("dopo il logout mostra la home(accesso publico)", async () => {
     vi.mocked(signOut).mockImplementation(async () => {
       await emitAuthState(null);
     });
@@ -414,8 +401,16 @@ describe("UNITICKET3-16 - Login e sessione", () => {
     );
 
     expect(
-      await screen.findByRole("button", { name: "Accedi" })
+      await screen.findByRole("link", { name: "Login" })
     ).toBeTruthy();
+
+    expect(
+      screen.getByRole("heading", { name: "Home" })
+    ).toBeTruthy();
+
+    expect(
+      screen.queryByRole("button", { name: "Logout" })
+    ).toBeNull();
 
     await waitFor(() =>
       expect(signOut).toHaveBeenCalledWith(auth)
@@ -494,7 +489,7 @@ describe("UNITICKET3-16 - Login e sessione", () => {
 
 describe("UNITICKET3-16 - ProtectedRoute", () => {
   it("reindirizza al login chi non è autenticato", async () => {
-    renderWithAuth({ path: "/professor" });
+    renderWithAuth({path: "/personal-area"});
 
     expect(
       await screen.findByRole("button", { name: "Accedi" })
@@ -502,20 +497,20 @@ describe("UNITICKET3-16 - ProtectedRoute", () => {
 
     expect(
       screen.queryByRole("heading", {
-        name: "Pagina protetta di test",
+        name: "Area Personale",
       })
     ).toBeNull();
   });
 
   it("consente l'accesso al professore autenticato", async () => {
     renderWithAuth({
-      path: "/professor",
+      path: "/personal-area",
       currentUser: professorUser,
     });
 
     expect(
       await screen.findByRole("heading", {
-        name: "Pagina protetta di test",
+        name: "Area Personale",
       })
     ).toBeTruthy();
   });
