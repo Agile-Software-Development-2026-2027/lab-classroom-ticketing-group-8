@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useAuth } from "../contexts/useAuth";
-import { loginWithUniversityId, logout } from "../services/authService";
+import { loginWithUniversityId } from "../services/authService";
 import unicalLogo from "../assets/unical-logo.png";
 import "./Login.css";
 
+import { Link } from "react-router";
+
 export default function Login() {
-  const { user, profile, loading: sessionLoading } = useAuth();
+
   const [universityId, setUniversityId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -31,21 +32,13 @@ export default function Login() {
     }
   }
 
-  async function handleLogout() {
-    setError("");
-    try {
-      await logout();
-      setPassword("");
-      setShowPassword(false);
-    } catch {
-      setError("Logout non riuscito.");
-    }
-  }
-
   return (
     <div className="ur-auth">
       <main className="ur-auth-layout">
         <section className="ur-identity" aria-label="Università della Calabria">
+          <Link to="/" className="ur-back-home">
+            ← Home
+          </Link>
           <img
             className="ur-unical-logo"
             src={unicalLogo}
@@ -56,38 +49,6 @@ export default function Login() {
         <section className="ur-panel" aria-labelledby="ur-panel-heading">
           <h1 id="ur-panel-heading">Login</h1>
 
-          {sessionLoading ? (
-            <div className="ur-loading" role="status" aria-live="polite">
-              <span className="ur-loader" aria-hidden="true" />
-              Caricamento...
-            </div>
-          ) : user && profile ? (
-            <div className="ur-session">
-              {profile.role === "PROFESSOR" ? (
-                <div className="ur-session-details">
-                  <p>Benvenuto, {profile.displayName}</p>
-                  <p>Matricola: {profile.universityId}</p>
-                </div>
-              ) : (
-                <p className="ur-message ur-message-error" role="alert">
-                  Accesso non autorizzato.
-                </p>
-              )}
-
-              <button
-                className="ur-button ur-button-outline"
-                type="button"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
-              {error && (
-                <p className="ur-message ur-message-error" role="alert">
-                  {error}
-                </p>
-              )}
-            </div>
-          ) : (
             <form className="ur-login-form" onSubmit={handleSubmit}>
               <div className="ur-field">
                 <label htmlFor="ur-university-id">Matricola</label>
@@ -156,7 +117,7 @@ export default function Login() {
                 {loading ? "Accesso in corso..." : "Accedi"}
               </button>
             </form>
-          )}
+          
         </section>
       </main>
     </div>

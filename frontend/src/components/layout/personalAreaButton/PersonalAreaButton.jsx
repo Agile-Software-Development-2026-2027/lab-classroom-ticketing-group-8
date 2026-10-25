@@ -10,7 +10,7 @@ export default function PersonalAreaButton() {
   }
 
   return (
-    <Link className="app-header-link" to="/area-personale">
+    <Link className="app-header-link" to="/personal-area">
       Area personale
     </Link>
   );
