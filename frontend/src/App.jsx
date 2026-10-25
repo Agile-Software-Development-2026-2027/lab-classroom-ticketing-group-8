@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router";
 import MainLayout from "./components/layout/MainLayout"
 
 import Home from "./pages/Home";
-import PersonalPage from "./pages/personal-page";
+import PersonalPage from "./pages/Personal-page";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import LoginRoute from "./components/auth/LoginRoute";
 

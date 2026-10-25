@@ -46,4 +46,8 @@ jobs:
 
       - name: Run authentication tests
         working-directory: frontend
-        run: npm run test
+        run: npm run test -- src/tests/UNITICKET3-16.test.jsx
+
+      - name: Run home navigation test
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET3-27.test.jsx

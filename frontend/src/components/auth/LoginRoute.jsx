@@ -6,6 +6,10 @@ import Login from "../../pages/Login";
 export default function LoginRoute() {
   const { user, profile, loading } = useAuth();
 
+  if (loading) {
+    return <p role="status">Caricamento...</p>;
+  }
+
   if (
     !loading &&
     user &&
