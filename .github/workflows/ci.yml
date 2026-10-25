@@ -17,10 +17,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
     steps:
       - uses: actions/checkout@v4
-      # Add here the steps that build and test your project.
-      # Until then this job does nothing and always passes.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -33,7 +32,7 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run ESLint
+      - name: Run lint
         working-directory: frontend
         run: npm run lint
 
@@ -43,23 +42,61 @@ jobs:
 
       - name: Verify build output
         run: test -f frontend/dist/index.html
-        
+
   auth:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    steps:
 
+    steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
       - name: Run authentication tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-16.test.jsx
-  
+
   home_navigation:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
     steps:
-      
       - uses: actions/checkout@v4
-      - name: Run home navigation test
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run home navigation tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-27.test.jsx
+
+  test:
+    name: test
+    needs: [build, auth, home_navigation]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Verify all jobs passed
+        run: |
+          test "${{ needs.build.result }}" = "success"
+          test "${{ needs.auth.result }}" = "success"
+          test "${{ needs.home_navigation.result }}" = "success"
