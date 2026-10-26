@@ -1,3 +1,10 @@
+import Calendar from "../components/calendar/Calendar";
+import "./Home.css";
+
 export default function Home() {
-  return <h1>Home</h1>;
+  return (
+    <section className="home-page">
+      <Calendar />
+    </section>
+  );
 }
