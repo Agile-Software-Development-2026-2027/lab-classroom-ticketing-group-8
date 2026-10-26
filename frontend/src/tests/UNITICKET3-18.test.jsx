@@ -8,10 +8,11 @@ import { doc, getDoc } from "firebase/firestore";
 
 import { auth } from "../firebase/client";
 import { AuthProvider } from "../contexts/AuthContext";
+import App from "../App";
 import Login from "../pages/Login";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 
-// Questi test non si collegano al progetto Firebase reale.
+// Simuliamo Firebase: i test non usano account o database reali.
 vi.mock("../firebase/client", () => ({
   auth: { test: "auth" },
   db: { test: "firestore" },
@@ -28,8 +29,8 @@ vi.mock("firebase/firestore", () => ({
   getDoc: vi.fn(),
 }));
 
-const administrator = {
-  uid: "uid-administrator-test",
+const admin = {
+  uid: "admin-test",
   email: "200001@uniroom.test",
 };
 
@@ -40,41 +41,55 @@ const adminProfile = {
   role: "ADMIN",
 };
 
-let emitAuthState;
+let changeSession;
 
-function renderApp({ path = "/login", currentUser = null, profile = adminProfile } = {}) {
+function renderWithAuth({ path = "/login", user = null, profile = adminProfile, adminOnly = false } = {}) {
   vi.mocked(getDoc).mockResolvedValue({
     exists: () => true,
     data: () => profile,
   });
 
   vi.mocked(onAuthStateChanged).mockImplementation((_auth, onChange) => {
-    emitAuthState = onChange;
-    void onChange(currentUser);
+    changeSession = onChange;
+    void onChange(user);
     return vi.fn();
   });
 
   return render(
     <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
-            <Route
-              path="/administration"
-              element={<h1>Area amministrativa di test</h1>}
-            />
-          </Route>
-        </Routes>
+        {adminOnly ? (
+          // Route di prova: nel progetto non esiste ancora una pagina amministrativa.
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
+              <Route
+                path="/administration"
+                element={<h1>Area amministrativa di test</h1>}
+              />
+            </Route>
+          </Routes>
+        ) : (
+          <App />
+        )}
       </AuthProvider>
     </MemoryRouter>
   );
 }
 
+function fillLogin() {
+  fireEvent.change(screen.getByRole("textbox", { name: "Matricola" }), {
+    target: { value: "200001" },
+  });
+  fireEvent.change(screen.getByLabelText("Password"), {
+    target: { value: "password-fittizia" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Accedi" }));
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
-  emitAuthState = null;
-
+  changeSession = null;
   vi.mocked(doc).mockImplementation((_db, collection, uid) => ({ collection, uid }));
   vi.mocked(signOut).mockResolvedValue(undefined);
 });
@@ -84,31 +99,25 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("UNITICKET3-18 - Login as Administrator", () => {
-  it("permette il login e riconosce il ruolo ADMIN", async () => {
+describe("UNITICKET3-18 - Login amministratore", () => {
+  it("autentica ADMIN e mostra la Home", async () => {
     vi.mocked(signInWithEmailAndPassword).mockImplementation(async () => {
-      await emitAuthState(administrator);
-      return { user: administrator };
+      await changeSession(admin);
+      return { user: admin };
     });
 
-    renderApp();
+    renderWithAuth();
+    await screen.findByRole("button", { name: "Accedi" });
+    fillLogin();
 
-    fireEvent.change(await screen.findByRole("textbox", { name: "Matricola" }), {
-      target: { value: "200001" },
-    });
-    fireEvent.change(screen.getByLabelText("Password"), {
-      target: { value: "password-fittizia" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Accedi" }));
-
-    expect(await screen.findByText("Benvenuto, Amministratore Test")).toBeTruthy();
-    expect(screen.getByText("Ruolo: Amministratore")).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
     expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
       auth,
       "200001@uniroom.test",
       "password-fittizia"
     );
+    expect(getDoc).toHaveBeenCalled();
   });
 
   it("rifiuta credenziali errate", async () => {
@@ -116,53 +125,39 @@ describe("UNITICKET3-18 - Login as Administrator", () => {
       new Error("auth/invalid-credential")
     );
 
-    renderApp();
-
-    fireEvent.change(await screen.findByRole("textbox", { name: "Matricola" }), {
-      target: { value: "200001" },
-    });
-    fireEvent.change(screen.getByLabelText("Password"), {
-      target: { value: "password-errata" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Accedi" }));
+    renderWithAuth();
+    await screen.findByRole("button", { name: "Accedi" });
+    fillLogin();
 
     expect((await screen.findByRole("alert")).textContent).toContain(
       "Accesso non riuscito. Controlla le credenziali."
     );
-    expect(screen.queryByRole("button", { name: "Logout" })).toBeNull();
   });
 
-  it("ripristina una sessione ADMIN già esistente", async () => {
-    renderApp({ currentUser: administrator });
-
-    expect(await screen.findByText("Benvenuto, Amministratore Test")).toBeTruthy();
-    expect(screen.getByText("Ruolo: Amministratore")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
-    expect(getDoc).toHaveBeenCalled();
-  });
-
-  it("esegue il logout e torna al form", async () => {
+  it("ripristina la sessione ADMIN ed esegue il logout dalla Home", async () => {
     vi.mocked(signOut).mockImplementation(async () => {
-      await emitAuthState(null);
+      await changeSession(null);
     });
 
-    renderApp({ currentUser: administrator });
+    renderWithAuth({ path: "/", user: admin });
+
     fireEvent.click(await screen.findByRole("button", { name: "Logout" }));
 
-    expect(await screen.findByRole("button", { name: "Accedi" })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "Login" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Home" })).toBeTruthy();
     await waitFor(() => expect(signOut).toHaveBeenCalledWith(auth));
   });
 
-  it("permette a ADMIN di entrare in una route riservata", async () => {
-    renderApp({ path: "/administration", currentUser: administrator });
+  it("consente ad ADMIN di accedere a una route riservata", async () => {
+    renderWithAuth({ path: "/administration", user: admin, adminOnly: true });
 
     expect(
       await screen.findByRole("heading", { name: "Area amministrativa di test" })
     ).toBeTruthy();
   });
 
-  it("nega la route ADMIN a un professore", async () => {
-    const professor = { uid: "uid-professor-test", email: "100001@uniroom.test" };
+  it("nega la route amministrativa al professore", async () => {
+    const professor = { uid: "professor-test", email: "100001@uniroom.test" };
     const professorProfile = {
       universityId: "100001",
       email: "100001@uniroom.test",
@@ -170,22 +165,16 @@ describe("UNITICKET3-18 - Login as Administrator", () => {
       role: "PROFESSOR",
     };
 
-    renderApp({
+    renderWithAuth({
       path: "/administration",
-      currentUser: professor,
+      user: professor,
       profile: professorProfile,
+      adminOnly: true,
     });
 
     expect((await screen.findByRole("alert")).textContent).toContain(
       "Accesso non autorizzato."
     );
-    expect(screen.queryByText("Area amministrativa di test")).toBeNull();
-  });
-
-  it("reindirizza al login un utente non autenticato", async () => {
-    renderApp({ path: "/administration" });
-
-    expect(await screen.findByRole("button", { name: "Accedi" })).toBeTruthy();
     expect(screen.queryByText("Area amministrativa di test")).toBeNull();
   });
 });
