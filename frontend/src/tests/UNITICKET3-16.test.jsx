@@ -2,15 +2,14 @@
 
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router";
+import { MemoryRouter } from "react-router";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
 import { AuthProvider } from "../contexts/AuthContext";
-import Login from "../pages/Login";
-import ProtectedRoute from "../components/auth/ProtectedRoute";
+import App from "../App";
 
-// Nessuna connessione a Firebase reale.
+// Simuliamo Firebase: i test non usano account o database reali.
 vi.mock("../firebase/client", () => ({ auth: {}, db: {} }));
 vi.mock("firebase/auth", () => ({
   onAuthStateChanged: vi.fn(),
@@ -29,6 +28,7 @@ const professorProfile = {
 
 let changeAuthState;
 
+// Apre l'app con o senza una sessione gia' esistente.
 function openPage(user = null, path = "/login") {
   vi.mocked(getDoc).mockResolvedValue({
     exists: () => true,
@@ -44,18 +44,14 @@ function openPage(user = null, path = "/login") {
   render(
     <MemoryRouter initialEntries={[path]}>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<ProtectedRoute allowedRoles={["PROFESSOR"]} />}>
-            <Route path="/professor" element={<h1>Area professore</h1>} />
-          </Route>
-        </Routes>
+        <App />
       </AuthProvider>
     </MemoryRouter>
   );
 }
 
-async function fillForm() {
+// Compila il form e preme Accedi.
+async function submitLogin() {
   fireEvent.change(await screen.findByLabelText("Matricola"), {
     target: { value: "100001" },
   });
@@ -74,49 +70,58 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("UNITICKET3-16 - Login professore", () => {
-  it("1. Permette il login del professore", async () => {
+  it("1. Dopo il login mostra la Home e i pulsanti dell'utente", async () => {
     vi.mocked(signInWithEmailAndPassword).mockImplementation(async () => {
       await changeAuthState(professor);
       return { user: professor };
     });
-    openPage();
-    await fillForm();
 
-    expect(await screen.findByText("Benvenuto, Professore Test")).toBeTruthy();
+    openPage();
+    await submitLogin();
+
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Area personale" })).toBeTruthy();
   });
 
-  it("2. Rifiuta le credenziali errate", async () => {
+  it("2. Mostra un errore per credenziali sbagliate", async () => {
     vi.mocked(signInWithEmailAndPassword).mockRejectedValue(
       new Error("auth/invalid-credential")
     );
+
     openPage();
-    await fillForm();
+    await submitLogin();
 
     expect((await screen.findByRole("alert")).textContent).toContain(
       "Accesso non riuscito"
     );
   });
 
-  it("3. Ripristina una sessione già esistente", async () => {
+  it("3. Ripristina una sessione e mostra la Home", async () => {
     openPage(professor);
 
-    expect(await screen.findByRole("button", { name: "Logout" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
   });
 
-  it("4. Esegue il logout", async () => {
+  it("4. Dopo il logout resta sulla Home pubblica", async () => {
     vi.mocked(signOut).mockImplementation(async () => {
       await changeAuthState(null);
     });
-    openPage(professor);
+
+    openPage(professor, "/");
     fireEvent.click(await screen.findByRole("button", { name: "Logout" }));
 
-    expect(await screen.findByRole("button", { name: "Accedi" })).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "Login" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Home" })).toBeTruthy();
     expect(signOut).toHaveBeenCalledOnce();
   });
 
-  it("5. Permette al professore l'accesso alla sua route", async () => {
-    openPage(professor, "/professor");
+  it("5. Il professore autenticato puo' aprire l'Area Personale", async () => {
+    openPage(professor, "/personal-area");
 
-    expect(await screen.findByText("Area professore")).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "Area Personale" })
+    ).toBeTruthy();
   });
 });
