@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 
 import { useAuth } from "../../../contexts/useAuth";
-
+import "./PersonalAreaButton.css"
 export default function PersonalAreaButton() {
   const { user, profile, loading } = useAuth();
 
@@ -10,7 +10,7 @@ export default function PersonalAreaButton() {
   }
 
   return (
-    <Link className="app-header-link" to="/area-personale">
+    <Link className="app-header-link" to="/personal-area">
       Area personale
     </Link>
   );

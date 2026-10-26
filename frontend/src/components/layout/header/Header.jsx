@@ -1,9 +1,8 @@
 import { Link } from "react-router";
 
 import unicalLogo from "../../../assets/app-header-logo.png"
-import AuthButton from "../authButton/AuthButtun";
-import PersonalAreaButton from "../personalAreaButton/PersonalAreaButton"
 import "./Header.css";
+import HeaderNav from "../nav/HeaderNav";
 
 export default function Header() {
   return (
@@ -16,16 +15,10 @@ export default function Header() {
             alt="Università della Calabria"
           />
 
-          <span>UniRoom</span>
+          <span className="app-header-title">UniRoom</span>
         </Link>
 
-        <nav
-          className="app-header-nav"
-          aria-label="Navigazione utente"
-        >
-          <PersonalAreaButton />
-          <AuthButton />
-        </nav>
+        <HeaderNav/>
       </div>
     </header>
   );
