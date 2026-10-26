@@ -1,8 +1,10 @@
 import CalendarNavigation from "../navigation/CalendarNavigaton";
+import DatePicker from "../datePicker/DatePicker";
 import "./CalendarToolbar.css";
 
 export default function CalendarToolbar({
   referenceDate,
+  onDateChange,
   onPrevious,
   onToday,
   onNext,
@@ -23,6 +25,11 @@ export default function CalendarToolbar({
       <h2 className="calendar-toolbar-title" aria-live="polite">
         {monthLabel}
       </h2>
+
+      <DatePicker
+        referenceDate={referenceDate}
+        onDateChange={onDateChange}
+      />
     </div>
   );
 }
