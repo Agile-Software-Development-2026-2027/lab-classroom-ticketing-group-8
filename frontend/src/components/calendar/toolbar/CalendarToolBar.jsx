@@ -6,9 +6,7 @@ import CalendarNavigation from "../navigation/CalendarNavigaton";
 import "./CalendarToolBar.css";
 
 export default function CalendarToolbar({
-  referenceDate,
   periodLabel,
-  onDateChange,
   onPrevious,
   onToday,
   onNext,

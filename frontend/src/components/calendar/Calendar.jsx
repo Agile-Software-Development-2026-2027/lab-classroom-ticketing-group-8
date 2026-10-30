@@ -5,9 +5,7 @@ import CalendarToolbar from "./toolbar/CalendarToolBar";
 import CalendarDayDetails from "./grid/calendarDayDetails/CalendarDayDetails";
 import CalendarGrid from "./grid/CalendarGrid"
 
-import {
-  calendarBookingsMock,
-} from "../../data/calendarMock";
+import useCalendarBookings from "../../hooks/useCalendarBookings";
 
 import CalendarFilters from "./filters/CalendarFilters";
 
@@ -41,8 +39,6 @@ export default function Calendar() {
   ? ""
   : "Seleziona un dipartimento per visualizzare le prenotazioni.";
 
-  const message = catalogError || filterMessage;
-
   firstDate.setHours(0, 0, 0, 0);
   firstDate.setDate(1);
   // getDay usa domenica=0; trasformiamo lunedi nel primo giorno.
@@ -52,49 +48,62 @@ export default function Calendar() {
     date.setDate(date.getDate() + index);
     return { date, dateKey: dateKey(date) };
   });
-  const bookings = calendarBookingsMock
-  .filter((booking) => {
+  
+  // Il periodo comprende tutte le 42 celle visibili.
+  const endDate = new Date(firstDate);
+  endDate.setDate(endDate.getDate() + days.length);
+
+  const {
+    bookings: loadedBookings,
+    loading: bookingsLoading,
+    error: bookingsError,
+  } = useCalendarBookings({
+    fromDate: days[0].dateKey,
+    toDateExclusive: dateKey(endDate),
+    departmentId,
+    departments,
+    classrooms,
+  });
+
+  const message = catalogError || bookingsError || filterMessage;
+
+  // Manteniamo il filtro aula nell'interfaccia.
+  const bookings = loadedBookings.filter((booking) => {
     return (
       hasDepartment &&
-      booking.status === "APPROVED" &&
       booking.departmentId === departmentId &&
-      (classroomId === "" || booking.classroomId === classroomId)
-    );
-  })
-  .sort((a, b) => {
-    return (
-      a.date.localeCompare(b.date) ||
-      a.startsAt.localeCompare(b.startsAt)
+      (!classroomId || booking.classroomId === classroomId)
     );
   });
+
   function changeDate(date) {
-    setToday(new Date());
-    setReferenceDate(date);
-    setSelectedDay(null);
+      setToday(new Date());
+      setReferenceDate(date);
+      setSelectedDay(null);
   }
   function changeMonth(amount) {
-    const next = new Date(referenceDate);
-    next.setDate(1);
-    next.setMonth(next.getMonth() + amount);
-    changeDate(next);
+      const next = new Date(referenceDate);
+      next.setDate(1);
+      next.setMonth(next.getMonth() + amount);
+      changeDate(next);
   }
   function openDay(day, button) {
-    lastDayButton.current = button;
-    setSelectedDay(day);
+      lastDayButton.current = button;
+      setSelectedDay(day);
   }
   function closeDay() {
-    setSelectedDay(null);
-    lastDayButton.current?.focus();
+      setSelectedDay(null);
+      lastDayButton.current?.focus();
   }
   function changeDepartment(nextDepartmentId) {
-    setDepartmentId(nextDepartmentId);
+      setDepartmentId(nextDepartmentId);
 
-    // L'aula precedente potrebbe appartenere a un altro dipartimento.
-    setClassroomId("");
+      // L'aula precedente potrebbe appartenere a un altro dipartimento.
+      setClassroomId("");
   }
   const periodLabel = referenceDate.toLocaleDateString("it-IT", {
-    month: "long",
-    year: "numeric",
+      month: "long",
+      year: "numeric",
   }
   ); 
   return (
@@ -134,14 +143,14 @@ export default function Calendar() {
       {message && (
         <p
           className="calendar-message"
-          role={catalogError ? "alert" : undefined}
+          role={catalogError || bookingsError ? "alert" : undefined}
         >
           {message}
         </p>
       )}
       <CalendarGrid days={days} today={today} view="month"
         referenceDate={referenceDate} bookings={bookings}
-        selectedDay={selectedDay} showCounts={hasDepartment} onSelectDay={openDay}
+        selectedDay={selectedDay} showCounts={ hasDepartment && !bookingsLoading && !bookingsError } onSelectDay={openDay}
       />
 </section>
 );

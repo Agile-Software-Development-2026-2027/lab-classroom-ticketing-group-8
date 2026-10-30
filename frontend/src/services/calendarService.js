@@ -1,7 +1,13 @@
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase/client";
+import {
+  collection,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 
-import { calendarBookingsMock } from "../data/calendarMock";
+import { db } from "../firebase/client";
 
 export async function getCalendarCatalog() {
 
@@ -41,24 +47,75 @@ export async function getCalendarCatalog() {
   };
 }
 
-// Per questo passaggio le prenotazioni usano ancora i mock.
-export async function getCalendarBookings(filters) {
+export async function getCalendarBookings(filters, catalog) {
   const {
     fromDate,
     toDateExclusive,
     departmentId,
-    classroomId,
   } = filters;
 
   if (!departmentId) return [];
 
-  return calendarBookingsMock.filter((booking) => {
+  const bookingsQuery = query(
+    collection(db, "bookingRequest"),
+    where("status", "==", "APPROVED"),
+    where(
+      "department",
+      "==",
+      doc(db, "departments", departmentId)
+    ),
+    where("date", ">=", fromDate),
+    where("date", "<", toDateExclusive),
+    orderBy("date")
+  );
+
+  const snapshot = await getDocs(bookingsQuery);
+
+  const department = catalog.departments.find(
+    (item) => item.id === departmentId
+  );
+
+  const timeOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Rome",
+  };
+
+  const bookings = snapshot.docs.map((document) => {
+    const data = document.data();
+
+    const classroom = catalog.classrooms.find(
+      (item) => item.id === data.classroom.id
+    );
+
+    return {
+      id: document.id,
+      date: data.date,
+
+      startsAt: data.startsAt
+        .toDate()
+        .toLocaleTimeString("it-IT", timeOptions),
+
+      endsAt: data.endsAt
+        .toDate()
+        .toLocaleTimeString("it-IT", timeOptions),
+
+      departmentId: data.department.id,
+      departmentName: department?.name ?? "Dipartimento non disponibile",
+
+      classroomId: data.classroom.id,
+      classroomName: classroom?.name ?? "Aula non disponibile",
+      cubo: classroom?.cubo ?? "",
+
+      professorName: data.professorName ?? "Nome non disponibile",
+      status: data.status,
+    };
+  });
+
+  return bookings.sort((a, b) => {
     return (
-      booking.status === "APPROVED" &&
-      booking.date >= fromDate &&
-      booking.date < toDateExclusive &&
-      booking.departmentId === departmentId &&
-      (!classroomId || booking.classroomId === classroomId)
+      a.date.localeCompare(b.date) ||
+      a.startsAt.localeCompare(b.startsAt)
     );
   });
 }
