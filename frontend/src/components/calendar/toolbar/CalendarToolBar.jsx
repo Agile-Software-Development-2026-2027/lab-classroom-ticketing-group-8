@@ -1,18 +1,16 @@
 import CalendarNavigation from "../navigation/CalendarNavigaton";
-import DatePicker from "../datePicker/DatePicker";
-import "./CalendarToolbar.css";
+import DatePicker from "../datePicker/DatePicker"
+
+import "./CalendarToolBar.css";
 
 export default function CalendarToolbar({
   referenceDate,
+  periodLabel,
   onDateChange,
   onPrevious,
   onToday,
   onNext,
 }) {
-  const monthLabel = referenceDate.toLocaleDateString("it-IT", {
-    month: "long",
-    year: "numeric",
-  });
 
   return (
     <div className="calendar-toolbar">
@@ -23,7 +21,7 @@ export default function CalendarToolbar({
       />
 
       <h2 className="calendar-toolbar-title" aria-live="polite">
-        {monthLabel}
+        {periodLabel}
       </h2>
 
       <DatePicker
