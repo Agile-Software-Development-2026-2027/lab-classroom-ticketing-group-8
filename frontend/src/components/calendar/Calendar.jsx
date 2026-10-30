@@ -7,10 +7,11 @@ import CalendarGrid from "./grid/CalendarGrid"
 
 import {
   calendarBookingsMock,
-  calendarCatalogMock,
 } from "../../data/calendarMock";
 
 import CalendarFilters from "./filters/CalendarFilters";
+
+import useCalendarCatalog from "../../hooks/useCalendarCatalog";
 // Funzione usata solo qui: restituisce una data locale YYYY-MM-DD.
 function dateKey(date) {
   return [
@@ -20,6 +21,13 @@ function dateKey(date) {
   ].join("-");
 }
 export default function Calendar() {
+  
+  const {
+    departments,
+    classrooms,
+    error: catalogError,
+  } = useCalendarCatalog();
+
   const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [today, setToday] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState(null);
@@ -32,6 +40,8 @@ export default function Calendar() {
   const filterMessage = hasDepartment
   ? ""
   : "Seleziona un dipartimento per visualizzare le prenotazioni.";
+
+  const message = catalogError || filterMessage;
 
   firstDate.setHours(0, 0, 0, 0);
   firstDate.setDate(1);
@@ -85,30 +95,50 @@ export default function Calendar() {
   const periodLabel = referenceDate.toLocaleDateString("it-IT", {
     month: "long",
     year: "numeric",
-  });
+  }
+  ); 
   return (
     <section className="classroom-calendar" aria-label="Calendario delle aule">
+      {/* TODO: ripristinare il passaggio dati al datepicker nel componente tool bar
       <CalendarToolbar
         referenceDate={referenceDate} periodLabel={periodLabel}
         onPrevious={() => changeMonth(-1)} onNext={() => changeMonth(1)}
         onToday={() => changeDate(new Date())} onDateChange={changeDate}
       />
+      */}
+
+      <CalendarToolbar
+        periodLabel={periodLabel}
+        onPrevious={() => changeMonth(-1)}
+        onNext={() => changeMonth(1)}
+        onToday={() => changeDate(new Date())}
+      />
       <CalendarFilters
-        departments={calendarCatalogMock.departments}
-        classrooms={calendarCatalogMock.classrooms}
+        departments={departments}
+        classrooms={classrooms}
         departmentId={departmentId}
         classroomId={classroomId}
         onDepartmentChange={changeDepartment}
         onClassroomChange={setClassroomId}
       />
-
-      {filterMessage && (
-        <p className="calendar-message">{filterMessage}</p>
+      {selectedDay && (
+        <CalendarDayDetails
+          day={selectedDay}
+          bookings={bookings.filter(
+            (booking) => booking.date === selectedDay.dateKey
+          )}
+          message={message}
+          onClose={closeDay}
+        />
       )}
-      {selectedDay && <CalendarDayDetails day={selectedDay}
-        bookings={bookings.filter((booking) => booking.date === selectedDay.dateKey)}
-        message={filterMessage} onClose={closeDay}
-      />}
+      {message && (
+        <p
+          className="calendar-message"
+          role={catalogError ? "alert" : undefined}
+        >
+          {message}
+        </p>
+      )}
       <CalendarGrid days={days} today={today} view="month"
         referenceDate={referenceDate} bookings={bookings}
         selectedDay={selectedDay} showCounts={hasDepartment} onSelectDay={openDay}

@@ -1,5 +1,7 @@
 import CalendarNavigation from "../navigation/CalendarNavigaton";
-import DatePicker from "../datePicker/DatePicker"
+
+// TODO: Da riattivare nello sprint dedicato alle altre viste.
+// import DatePicker from "../datePicker/DatePicker";
 
 import "./CalendarToolBar.css";
 
@@ -24,10 +26,14 @@ export default function CalendarToolbar({
         {periodLabel}
       </h2>
 
-      <DatePicker
-        referenceDate={referenceDate}
-        onDateChange={onDateChange}
-      />
+      {/* 
+        Da riattivare insieme alle props referenceDate e onDateChange:
+
+        <DatePicker
+          referenceDate={referenceDate}
+          onDateChange={onDateChange}
+        />
+      */}
     </div>
   );
 }
