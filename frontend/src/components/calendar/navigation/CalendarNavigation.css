@@ -1,0 +1,27 @@
+.calendar-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.calendar-navigation button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--ur-red);
+  border-radius: 6px;
+  background: white;
+  color: var(--ur-red);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.calendar-navigation button:hover {
+  background: #fff1f1;
+}
+
+.calendar-navigation button:focus-visible {
+  outline: 3px solid var(--ur-red);
+  outline-offset: 3px;
+}
