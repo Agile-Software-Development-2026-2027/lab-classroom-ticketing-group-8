@@ -1,0 +1,28 @@
+.calendar-grid-scroll {
+  overflow-x: auto;
+}
+.calendar-grid {
+  min-width: 560px;
+}
+.calendar-grid-weekdays, .calendar-grid-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.calendar-grid-weekdays span {
+  padding: 12px 4px;
+  text-align: center;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.calendar-grid-days {
+  gap: 1px;
+  background: #d9dde3;
+  border: 1px solid #d9dde3;
+}
+.calendar-grid-day {
+  min-width: 0;
+}
+.calendar-grid-day .calendar-grid-weekdays,
+.calendar-grid-day .calendar-grid-days {
+  grid-template-columns: minmax(0, 1fr);
+}
