@@ -136,7 +136,7 @@ export default function Calendar() {
           bookings={bookings.filter(
             (booking) => booking.date === selectedDay.dateKey
           )}
-          message={message}
+          message={bookingsLoading ? "Caricamento prenotazioni..." : message}
           onClose={closeDay}
         />
       )}
