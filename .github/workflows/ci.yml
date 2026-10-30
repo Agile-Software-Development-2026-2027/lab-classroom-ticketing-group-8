@@ -110,8 +110,30 @@ jobs:
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-18.test.jsx
 
+  calendar_view:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run calendar tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET3-19.test.jsx
+
   test:
-    needs: [build, auth, home_navigation, admin_auth]
+    needs: [build, auth, home_navigation, admin_auth, calendar_view]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -123,3 +145,4 @@ jobs:
           test "${{ needs.auth.result }}" = "success"
           test "${{ needs.home_navigation.result }}" = "success"
           test "${{ needs.admin_auth.result }}" = "success"
+          test "${{ needs.calendar_view.result }}" = "success"

@@ -13,6 +13,13 @@ vi.mock("../services/authService", () => ({
   loginWithUniversityId: vi.fn(),
   logout: vi.fn(),
 }));
+vi.mock("../services/calendarService", () => ({
+  getCalendarCatalog: async () => ({
+    departments: [],
+    classrooms: [],
+  }),
+  getCalendarBookings: async () => [],
+}));
 
 const guestSession = {
   user: null,
@@ -60,7 +67,7 @@ describe("UNITICKET3-27 - Header e navigazione", () => {
     renderPage("/");
 
     expect(
-      screen.getByRole("heading", { name: "Home" })
+      screen.getByRole("heading", { name: "Calendario aule" })
     ).toBeTruthy();
 
     expect( //se entra senza log ci si aspetta l'href alla pagina di login
@@ -138,7 +145,7 @@ describe("UNITICKET3-27 - Header e navigazione", () => {
       screen.getByRole("button", {name:"Logout"})
     );
     expect(
-      await screen.findByRole("heading", { name: "Home" })
+      await screen.findByRole("heading", { name: "Calendario aule" })
     ).toBeTruthy();
   });
 
@@ -159,7 +166,7 @@ describe("UNITICKET3-27 - Header e navigazione", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "Home" })
+      await screen.findByRole("heading", { name: "Calendario aule" })
     ).toBeTruthy();
 
     expect(logout).toHaveBeenCalledTimes(1);
