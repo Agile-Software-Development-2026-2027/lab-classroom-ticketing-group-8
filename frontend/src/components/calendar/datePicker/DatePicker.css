@@ -1,0 +1,25 @@
+.calendar-date-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ur-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.calendar-date-picker input {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #bfc4cc;
+  border-radius: 6px;
+  background: white;
+  color: var(--ur-text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.calendar-date-picker input:focus-visible {
+  outline: 3px solid var(--ur-red);
+  outline-offset: 3px;
+}

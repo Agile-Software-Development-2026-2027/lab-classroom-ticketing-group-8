@@ -1,0 +1,49 @@
+.calendar-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #dedee3;
+  border-radius: 6px;
+  background: white;
+}
+
+.calendar-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ur-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.calendar-filter select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #bfc4cc;
+  border-radius: 6px;
+  background: white;
+  color: var(--ur-text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.calendar-filter select:disabled {
+  background: #f1f3f6;
+  color: var(--ur-muted);
+  cursor: not-allowed;
+}
+
+.calendar-filter select:focus-visible {
+  outline: 3px solid var(--ur-red);
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .calendar-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
