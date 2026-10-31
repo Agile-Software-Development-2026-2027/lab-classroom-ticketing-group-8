@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getPendingBookingRequests } from "../services/bookingService";
+import "./BookingRequests.css";
 
 export default function BookingRequests() {
   const [requests, setRequests] = useState([]);
