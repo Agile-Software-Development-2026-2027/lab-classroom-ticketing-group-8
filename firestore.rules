@@ -4,8 +4,19 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /users/{userId} { 
-      allow get: if request.auth != null
-                 && request.auth.uid == userId;
+      allow get: if request.auth != null;
+    }
+
+    match /bookingRequest/{requestId} {
+      allow read: if request.auth != null;
+    }
+
+    match /classrooms/{classroomId} {
+      allow read: if request.auth != null;
+    }
+
+    match /departments/{departmentId} {
+      allow read: if request.auth != null;
     }
 
     match /{document=**} {
