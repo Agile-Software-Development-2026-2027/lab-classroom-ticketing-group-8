@@ -1,30 +1,40 @@
-import { useState } from "react";
-
-const mockRequests = [
-  {
-    id: "1",
-    classroom: "Aula MT11",
-    professorName: "Mario Rossi",
-    professorUniversityId: "123456",
-    date: "30/10/2026",
-    startTime: "09:00",
-    endTime: "11:00",
-    status: "PENDING",
-  },
-  {
-    id: "2",
-    classroom: "Aula MT5",
-    professorName: "Mario Bianchi",
-    professorUniversityId: "654321",
-    date: "31/10/2026",
-    startTime: "14:00",
-    endTime: "16:00",
-    status: "PENDING",
-  },
-];
+import { useEffect, useState } from "react";
+import { getPendingBookingRequests } from "../services/bookingService";
 
 export default function BookingRequests() {
-  const [requests] = useState(mockRequests);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadRequests() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getPendingBookingRequests();
+        if (isMounted) {
+          setRequests(data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError("Impossibile caricare le richieste. Riprova più tardi.");
+          console.error("Errore nel caricamento delle richieste:", err);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadRequests();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="ur-booking-container">
@@ -35,11 +45,26 @@ export default function BookingRequests() {
         </p>
       </header>
 
-      {requests.length === 0 ? (
+      {loading && (
+        <div className="ur-loading-state" role="status" aria-live="polite">
+          <div className="ur-loader" aria-hidden="true" />
+          <span>Caricamento delle richieste in corso...</span>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="ur-message ur-message-error" role="alert">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && requests.length === 0 && (
         <div className="ur-empty-state">
           <p>Nessuna richiesta di prenotazione in attesa.</p>
         </div>
-      ) : (
+      )}
+
+      {!loading && !error && requests.length > 0 && (
         <ul className="ur-requests-list" aria-label="Elenco richieste pendenti">
           {requests.map((request) => (
             <li key={request.id} className="ur-request-card">
