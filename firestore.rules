@@ -4,7 +4,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /users/{userId} { 
-      allow get: if request.auth != null;
+      allow get: if request.auth != null
+                 && request.auth.uid == userId;
     }
 
     match /bookingRequest/{requestId} {
