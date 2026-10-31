@@ -13,6 +13,14 @@ export function validateBookingData(data) {
         throw new Error("Tutti i campi obbligatori devono essere compilati.");
     }
 
+    // Verifica preavviso: la data deve essere dal giorno successivo in poi
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const bookingDate = new Date(date + "T00:00:00");
+    if (isNaN(bookingDate.getTime()) || bookingDate <= today) {
+        throw new Error("La richiesta deve essere inoltrata con almeno un giorno di preavviso.");
+    }
+
     if (startTime >= endTime) {
         throw new Error("L'orario di fine deve essere successivo all'orario di inizio.");
     }
