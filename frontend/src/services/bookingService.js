@@ -7,9 +7,9 @@ export function validateBookingData(data) {
         throw new Error("I dati della richiesta sono obbligatori.");
     }
 
-    const { date, startTime, endTime, room, professorId } = data;
+    const { date, startTime, endTime, classroom, professorId } = data;
 
-    if (!date || !startTime || !endTime || !room || !professorId) {
+    if (!date || !startTime || !endTime || !classroom || !professorId) {
         throw new Error("Tutti i campi obbligatori devono essere compilati.");
     }
 
@@ -21,17 +21,13 @@ export function validateBookingData(data) {
 export async function createBookingRequest(bookingData) {
     validateBookingData(bookingData);
 
-    // 2. Prepariamo l'oggetto definitivo da salvare su Firestore
-    // impostando lo stato obbligatorio "PENDING" richiesto da Jira\
     const newBooking = {
         ...bookingData,
         status: "PENDING",
         createdAt: serverTimestamp(),
     };
 
-    // 3. Salviamo su Firestore nella collezione "bookings"
-    const docRef = await addDoc(collection(db, "bookings"), newBooking);
+    const docRef = await addDoc(collection(db, "bookingRequest"), newBooking);
 
-    // Restituiamo l'ID del documento creato (utile per conferme a schermo)
     return docRef.id;
 }
