@@ -8,18 +8,20 @@ service cloud.firestore {
                  && request.auth.uid == userId;
     }
 
-    match /bookingRequest/{requestId} {
-      allow read: if request.auth != null;
+    // Catalogo pubblico utilizzato dal calendario.
+    match /departments/{departmentId} {
+      allow read: if true;
     }
 
     match /classrooms/{classroomId} {
-      allow read: if request.auth != null;
+      allow read: if true;
     }
 
-    match /departments/{departmentId} {
-      allow read: if request.auth != null;
+    // Il calendario pubblico mostra solo prenotazioni approvate.
+    match /bookingRequest/{bookingId} {
+      allow read: if resource.data.status == 'APPROVED';
     }
-
+    
     match /{document=**} {
       allow read, write: if false;
     }

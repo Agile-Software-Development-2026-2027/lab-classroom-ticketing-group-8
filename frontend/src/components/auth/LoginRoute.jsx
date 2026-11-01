@@ -1,5 +1,5 @@
-import { Navigate } from "react-router";
 
+import { Navigate } from "react-router";
 import { useAuth } from "../../contexts/useAuth";
 import Login from "../../pages/Login";
 
