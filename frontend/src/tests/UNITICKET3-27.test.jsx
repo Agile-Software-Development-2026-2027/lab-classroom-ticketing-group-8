@@ -20,6 +20,9 @@ vi.mock("../services/calendarService", () => ({
   }),
   getCalendarBookings: async () => [],
 }));
+vi.mock("../services/bookingService", () => ({
+  getPendingBookingRequests: async () => [],
+}));
 
 const guestSession = {
   user: null,
