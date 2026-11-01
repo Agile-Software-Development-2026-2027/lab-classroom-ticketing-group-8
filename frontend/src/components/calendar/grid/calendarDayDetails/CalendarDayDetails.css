@@ -1,0 +1,39 @@
+.calendar-day-details {
+  padding: 20px;
+  border: 1px solid #e0e3e9;
+  border-radius: 6px;
+  background: white;
+}
+.calendar-day-details:focus {
+  outline: 2px solid var(--ur-red);
+  outline-offset: 2px;
+}
+.calendar-details-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.calendar-details-heading h3 {
+  margin: 0;
+  text-transform: capitalize;
+}
+.calendar-details-heading button {
+  padding: 9px 12px;
+border: 1px solid var(--ur-red);
+border-radius: 6px;
+background: white;
+color: var(--ur-red);
+font: inherit;
+cursor: pointer;
+}
+.calendar-booking-list {
+display: grid;
+gap: 12px;
+max-height: 320px;
+overflow-y: auto;
+margin: 16px 0 0;
+padding: 2px 8px 2px 2px;
+list-style: none;
+}

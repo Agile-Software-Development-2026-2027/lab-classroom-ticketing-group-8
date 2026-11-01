@@ -10,11 +10,7 @@ export default function LoginRoute() {
     return <p role="status">Caricamento...</p>;
   }
 
-  if (
-    !loading &&
-    user &&
-    profile?.role === "PROFESSOR"
-  ) {
+  if (user && ["PROFESSOR", "ADMIN"].includes(profile?.role)) {
     return <Navigate to="/" replace />;
   }
 

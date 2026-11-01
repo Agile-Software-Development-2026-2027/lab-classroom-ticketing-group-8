@@ -1,0 +1,16 @@
+.calendar-booking {
+padding: 14px;
+border: 1px solid #e0e3e9;
+border-left: 4px solid var(--ur-red);
+border-radius: 6px;
+}
+.calendar-booking h4 {
+margin: 0 0 8px;
+}
+.calendar-booking p {
+margin: 5px 0;
+}
+.calendar-booking-status {
+color: #8f171c;
+font-size: 14px;
+}

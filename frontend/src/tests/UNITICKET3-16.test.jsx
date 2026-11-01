@@ -79,7 +79,7 @@ describe("UNITICKET3-16 - Login professore", () => {
     openPage();
     await submitLogin();
 
-    expect(await screen.findByRole("heading", { name: "Home" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Calendario aule" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Area personale" })).toBeTruthy();
   });
@@ -100,7 +100,7 @@ describe("UNITICKET3-16 - Login professore", () => {
   it("3. Ripristina una sessione e mostra la Home", async () => {
     openPage(professor);
 
-    expect(await screen.findByRole("heading", { name: "Home" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Calendario aule" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
   });
 
@@ -113,7 +113,7 @@ describe("UNITICKET3-16 - Login professore", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Logout" }));
 
     expect(await screen.findByRole("link", { name: "Login" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Home" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Calendario aule" })).toBeTruthy();
     expect(signOut).toHaveBeenCalledOnce();
   });
 

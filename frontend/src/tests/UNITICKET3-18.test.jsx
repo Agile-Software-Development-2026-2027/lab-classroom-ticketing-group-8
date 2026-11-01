@@ -110,7 +110,7 @@ describe("UNITICKET3-18 - Login amministratore", () => {
     await screen.findByRole("button", { name: "Accedi" });
     fillLogin();
 
-    expect(await screen.findByRole("heading", { name: "Home" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Calendario aule" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
     expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
       auth,
@@ -144,7 +144,7 @@ describe("UNITICKET3-18 - Login amministratore", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Logout" }));
 
     expect(await screen.findByRole("link", { name: "Login" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Home" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Calendario aule" })).toBeTruthy();
     await waitFor(() => expect(signOut).toHaveBeenCalledWith(auth));
   });
 

@@ -1,0 +1,15 @@
+.classroom-calendar {
+display: grid;
+gap: 20px;
+}
+.calendar-message {
+margin: 0;
+padding: 12px 16px;
+border-radius: 6px;
+background: #eef1f6;
+color: #3c4d60;
+}
+.calendar-error {
+background: #fde9ea;
+color: #8f171c;
+}
