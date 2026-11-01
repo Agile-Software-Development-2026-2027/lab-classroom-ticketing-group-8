@@ -11,6 +11,18 @@ import { getPendingBookingRequests } from "../services/bookingService";
 vi.mock("../services/bookingService", () => ({
   getPendingBookingRequests: vi.fn(),
 }));
+vi.mock("../services/authService", () => ({
+  loginWithUniversityId: vi.fn(),
+  logout: vi.fn(),
+}));
+
+vi.mock("../services/calendarService", () => ({
+  getCalendarCatalog: async () => ({
+    departments: [],
+    classrooms: [],
+  }),
+  getCalendarBookings: async () => [],
+}));
 
 const guestSession = {
   user: null,
