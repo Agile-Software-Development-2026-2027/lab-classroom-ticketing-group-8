@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { useAuth } from "../contexts/useAuth";
+import BookingRequestForm from "../components/booking/BookingRequestForm";
 
 export default function PersonalPage() {
   const { profile } = useAuth();
@@ -23,6 +24,11 @@ export default function PersonalPage() {
           >
             Visualizza richieste di prenotazione
           </Link>
+        </div>
+      )}
+      {profile?.role === "PROFESSOR" && (
+        <div style={{ marginTop: "24px" }}>
+          <BookingRequestForm />
         </div>
       )}
     </div>
