@@ -47,6 +47,11 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'PROFESSOR';
     }
 
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
     function hasStrictBookingFields() {
       return request.resource.data.keys().hasAll([
         'classroom',
@@ -97,16 +102,25 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Il calendario pubblico mostra solo prenotazioni approvate.
-    // Solo i professori autenticati possono creare una richiesta con stato PENDING.
     match /bookingRequest/{bookingId} {
-      allow read: if resource.data.status == 'APPROVED';
+      // Il calendario pubblico mostra solo le prenotazioni approvate.
+      // L'amministratore può leggere anche quelle in attesa.
+      allow read: if resource.data.status == 'APPROVED' || isAdmin();
+
+      // Solo i professori autenticati possono creare una richiesta con stato PENDING.
       allow create: if isProfessor()
                     && request.resource.data.professor == /databases/$(database)/documents/users/$(request.auth.uid)
                     && request.resource.data.status == 'PENDING'
                     && hasStrictBookingFields()
                     && isValidBookingData()
                     && request.resource.data.startsAt < request.resource.data.endsAt;
+
+      // Solo l'amministratore può modificare richieste PENDING.
+      // Può modificare esclusivamente il campo status.
+      allow update: if isAdmin()
+                    && resource.data.status == 'PENDING'
+                    && request.resource.data.status in ['APPROVED', 'REJECTED']
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
     }
     
     match /{document=**} {
