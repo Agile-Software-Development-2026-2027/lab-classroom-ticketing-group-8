@@ -201,3 +201,91 @@
   color: var(--ur-text);
 }
 
+
+/* ACTION BUTTONS */
+.ur-request-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f4f8;
+}
+
+.ur-button {
+  padding: 7px 12px;
+  font-size: 12px;
+  min-height: 32px;
+  border-radius: 6px;
+  min-width: 120px;
+  border: 2px solid transparent;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* APPROVE BUTTON */
+.ur-button-approve {
+  background: #b71e24;
+  color: #ffffff;
+  border-color: #b71e24;
+}
+
+.ur-button-approve:hover:not(:disabled) {
+  background: #98181e;
+  border-color: #98181e;
+  box-shadow: 0 4px 12px rgba(183, 30, 36, 0.2);
+  transform: translateY(-2px);
+}
+
+/* REJECT BUTTON */
+.ur-button-reject {
+  background: #ffffff;
+  color: #b71e24;
+  border-color: #b71e24;
+}
+
+.ur-button-reject:hover:not(:disabled) {
+  background: #fff1f1;
+  border-color: #98181e;
+  color: #98181e;
+  transform: translateY(-2px);
+}
+
+/* ACTIVE STATE */
+.ur-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* DISABLED STATE */
+.ur-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* KEYBOARD ACCESSIBILITY */
+.ur-button:focus-visible {
+  outline: 3px solid rgba(183, 30, 36, 0.3);
+  outline-offset: 3px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+  .ur-request-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ur-button {
+    width: 100%;
+  }
+}
