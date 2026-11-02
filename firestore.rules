@@ -1,5 +1,42 @@
 rules_version = '2';
 
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - role: string (required, 'PROFESSOR' | 'ADMIN')
+//   - email: string (optional)
+//   - displayName: string (optional)
+//   - universityId: string (optional)
+//
+// Collection: departments
+// Document ID: {departmentId}
+// Public read access for calendar catalog.
+//
+// Collection: classrooms
+// Document ID: {classroomId}
+// Public read access for calendar catalog.
+//
+// Collection: bookingRequest
+// Document ID: {bookingId}
+// Fields:
+//   - date: string (required, "YYYY-MM-DD")
+//   - startTime: string (optional, "HH:mm")
+//   - endTime: string (optional, "HH:mm")
+//   - startsAt: timestamp (required)
+//   - endsAt: timestamp (required)
+//   - classroom: reference to /databases/$(database)/documents/classrooms/{classroomId} (required)
+//   - department: reference to /databases/$(database)/documents/departments/{departmentId} (required)
+//   - professor: reference to /databases/$(database)/documents/users/{userId} (required)
+//   - professorId: string (optional, userId)
+//   - status: string (required, "PENDING" on creation)
+//   - createdAt: serverTimestamp (optional)
+//
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -16,11 +53,12 @@ service cloud.firestore {
     function hasRequiredBookingFields() {
       return request.resource.data.keys().hasAll([
         'date',
-        'startTime',
-        'endTime',
+        'startsAt',
+        'endsAt',
         'classroom',
-        'status',
-        'professorId'
+        'department',
+        'professor',
+        'status'
       ]);
     }
 
@@ -43,10 +81,18 @@ service cloud.firestore {
     match /bookingRequest/{bookingId} {
       allow read: if resource.data.status == 'APPROVED';
       allow create: if isProfessor()
-                    && request.resource.data.professorId == request.auth.uid
+                    && (
+                      ('professorId' in request.resource.data && request.resource.data.professorId == request.auth.uid) ||
+                      ('professor' in request.resource.data && request.resource.data.professor == /databases/$(database)/documents/users/$(request.auth.uid))
+                    )
                     && request.resource.data.status == 'PENDING'
                     && hasRequiredBookingFields()
-                    && request.resource.data.startTime < request.resource.data.endTime;
+                    && request.resource.data.startsAt < request.resource.data.endsAt
+                    && (
+                      !('startTime' in request.resource.data) ||
+                      !('endTime' in request.resource.data) ||
+                      request.resource.data.startTime < request.resource.data.endTime
+                    );
     }
     
     match /{document=**} {

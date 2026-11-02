@@ -1,30 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../../contexts/useAuth";
 import { createBookingRequest } from "../../services/bookingService";
+import useCalendarCatalog from "../../hooks/useCalendarCatalog";
 import "./BookingRequestForm.css";
-
-const CLASSROOMS = [
-  { id: "MT1", name: "Aula MT1 (144 posti)" },
-  { id: "MT23", name: "Aula MT23 (169 posti)" },
-  { id: "MT4", name: "Aula MT4 (54 posti)" },
-  { id: "MT5", name: "Aula MT5 (158 posti)" },
-  { id: "MT5bis", name: "Aula MT5bis (94 posti)" },
-  { id: "MT6", name: "Aula MT6 (72 posti)" },
-  { id: "MTB", name: "Aula MTB (28 posti)" },
-  { id: "MT13", name: "Aula MT13 (32 posti)" },
-  { id: "MT14", name: "Aula MT14 (24 posti)" },
-  { id: "MT15", name: "Aula MT15 (45 posti)" },
-  { id: "A", name: "Aula A (126 posti)" },
-  { id: "DEA", name: "Aula DEA (26 posti)" },
-  { id: "Turing", name: "Aula Turing - ex MT10 (64 posti)" },
-  { id: "Pitagora", name: "Aula Pitagora - ex MT11 (64 posti)" },
-  { id: "Godel", name: "Aula Gödel - ex MT12 (32 posti)" },
-  { id: "Collaborativa", name: "Aula Collaborativa (36 posti)" },
-  { id: "LAB-30A", name: "Laboratorio LAB-30A (14 posti)" },
-  { id: "LAB-31A", name: "Laboratorio LAB-31A (44 posti)" },
-  { id: "LAB-31B", name: "Laboratorio LAB-31B (50 posti)" },
-  { id: "LAB-16C", name: "Laboratorio LAB-16C (60 posti)" },
-];
 
 const AVAILABLE_EQUIPMENT = [
   "Computer d'aula",
@@ -45,17 +23,18 @@ function getTomorrowDateString() {
 
 export default function BookingRequestForm() {
   const { user, profile } = useAuth();
+  const { classrooms, loading: catalogLoading, error: catalogError } = useCalendarCatalog();
 
   // Stati per i campi del modulo
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [classroom, setClassroom] = useState("");
+  const [selectedClassroomId, setSelectedClassroomId] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [selectedEquipment, setSelectedEquipment] = useState([]);
 
-  // Stati per messaggi di errore, successo e caricamento
+  // Stati per messaggi di feedback e caricamento
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -78,6 +57,15 @@ export default function BookingRequestForm() {
       return;
     }
 
+    if (!selectedClassroomId) {
+      setErrorMessage("Seleziona un'aula o laboratorio.");
+      return;
+    }
+
+    // Trova l'aula selezionata per ricavarne il dipartimento
+    const selectedRoom = classrooms.find((room) => room.id === selectedClassroomId);
+    const departmentId = selectedRoom?.departmentId || "demacs";
+
     try {
       setIsSubmitting(true);
 
@@ -85,7 +73,8 @@ export default function BookingRequestForm() {
         date,
         startTime,
         endTime,
-        classroom,
+        classroomId: selectedClassroomId,
+        departmentId,
         subject: subject || "Prenotazione aula e laboratori",
         description,
         equipment: selectedEquipment,
@@ -99,7 +88,7 @@ export default function BookingRequestForm() {
       setDate("");
       setStartTime("");
       setEndTime("");
-      setClassroom("");
+      setSelectedClassroomId("");
       setSubject("");
       setDescription("");
       setSelectedEquipment([]);
@@ -111,18 +100,30 @@ export default function BookingRequestForm() {
   }
 
   return (
-    <div className="booking-form-container">
-      <h2>Nuova Richiesta di Prenotazione</h2>
+    <div className="ur-booking-form-card">
+      <div className="ur-form-header">
+        <h2>Nuova Richiesta di Prenotazione</h2>
+        <p className="ur-form-subtitle">
+          Compila il modulo per richiedere l'assegnazione di un'aula o laboratorio didattico.
+        </p>
+      </div>
+
+      {catalogError && (
+        <div className="feedback-error" role="alert">
+          {catalogError}
+        </div>
+      )}
 
       {errorMessage && (
-        <p className="feedback-error" role="alert">
+        <div className="feedback-error" role="alert">
           {errorMessage}
-        </p>
+        </div>
       )}
+
       {successMessage && (
-        <p className="feedback-success" role="status">
+        <div className="feedback-success" role="status">
           {successMessage}
-        </p>
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="booking-form">
@@ -178,13 +179,18 @@ export default function BookingRequestForm() {
           <select
             id="classroom"
             required
-            value={classroom}
-            onChange={(e) => setClassroom(e.target.value)}
+            value={selectedClassroomId}
+            disabled={catalogLoading}
+            onChange={(e) => setSelectedClassroomId(e.target.value)}
           >
-            <option value="">-- Seleziona un'aula o laboratorio --</option>
-            {CLASSROOMS.map((room) => (
-              <option key={room.id} value={room.name}>
-                {room.name}
+            <option value="">
+              {catalogLoading
+                ? "-- Caricamento aule dal database... --"
+                : "-- Seleziona un'aula o laboratorio --"}
+            </option>
+            {classrooms.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name} {room.cubo ? `(Cubo ${room.cubo})` : ""}
               </option>
             ))}
           </select>
@@ -217,7 +223,7 @@ export default function BookingRequestForm() {
           />
         </div>
 
-        <button type="submit" className="submit-btn" disabled={isSubmitting}>
+        <button type="submit" className="submit-btn" disabled={isSubmitting || catalogLoading}>
           {isSubmitting ? "Invio in corso..." : "Invia richiesta"}
         </button>
       </form>

@@ -22,17 +22,25 @@ vi.mock("firebase/firestore", () => ({
   collection: vi.fn((_db, name) => ({ name })),
   addDoc: vi.fn(),
   serverTimestamp: vi.fn(() => "TIMESTAMP_TEST"),
-  doc: vi.fn(),
+  Timestamp: {
+    fromDate: vi.fn((date) => ({ toDate: () => date })),
+  },
+  doc: vi.fn((_db, col, id) => ({ collection: col, id })),
   getDoc: vi.fn(),
   getDocs: vi.fn(),
   query: vi.fn(),
   where: vi.fn(),
 }));
 
+const mockClassrooms = [
+  { id: "mt1", name: "Aula MT1", cubo: "22B", departmentId: "demacs" },
+  { id: "mt23", name: "Aula MT23", cubo: "22B", departmentId: "demacs" },
+];
+
 vi.mock("../services/calendarService", () => ({
   getCalendarCatalog: async () => ({
-    departments: [],
-    classrooms: [],
+    departments: [{ id: "demacs", name: "DeMaCS" }],
+    classrooms: mockClassrooms,
   }),
   getCalendarBookings: async () => [],
 }));
@@ -64,9 +72,9 @@ const adminSession = {
   loading: false,
 };
 
-function renderPersonalArea(session = professorSession) {
+function renderApp(path = "/personal-area", session = professorSession) {
   return render(
-    <MemoryRouter initialEntries={["/personal-area"]}>
+    <MemoryRouter initialEntries={[path]}>
       <AuthContext.Provider value={session}>
         <App />
       </AuthContext.Provider>
@@ -95,7 +103,8 @@ describe("UNITICKET3-21 - Service bookingService", () => {
       date: getFutureDate(3),
       startTime: "09:30",
       endTime: "11:30",
-      classroom: "Aula MT1 (144 posti)",
+      classroomId: "mt1",
+      departmentId: "demacs",
       professorId: "prof-123",
     };
 
@@ -112,7 +121,8 @@ describe("UNITICKET3-21 - Service bookingService", () => {
         date: getFutureDate(3),
         startTime: "09:30",
         endTime: "11:30",
-        classroom: "",
+        classroomId: "",
+        departmentId: "demacs",
         professorId: "prof-123",
       })
     ).toThrow("Tutti i campi obbligatori devono essere compilati.");
@@ -126,7 +136,8 @@ describe("UNITICKET3-21 - Service bookingService", () => {
         date: today,
         startTime: "09:00",
         endTime: "11:00",
-        classroom: "Aula MT1 (144 posti)",
+        classroomId: "mt1",
+        departmentId: "demacs",
         professorId: "prof-123",
       })
     ).toThrow("La richiesta deve essere inoltrata con almeno un giorno di preavviso.");
@@ -138,28 +149,20 @@ describe("UNITICKET3-21 - Service bookingService", () => {
         date: getFutureDate(3),
         startTime: "11:00",
         endTime: "09:00",
-        classroom: "Aula MT1 (144 posti)",
-        professorId: "prof-123",
-      })
-    ).toThrow("L'orario di fine deve essere successivo all'orario di inizio.");
-
-    expect(() =>
-      validateBookingData({
-        date: getFutureDate(3),
-        startTime: "10:00",
-        endTime: "10:00",
-        classroom: "Aula MT1 (144 posti)",
+        classroomId: "mt1",
+        departmentId: "demacs",
         professorId: "prof-123",
       })
     ).toThrow("L'orario di fine deve essere successivo all'orario di inizio.");
   });
 
-  it("createBookingRequest salva in Firestore con status PENDING e createdAt", async () => {
+  it("createBookingRequest salva in Firestore con DocumentReference, Timestamp e status PENDING", async () => {
     const bookingData = {
       date: getFutureDate(2),
       startTime: "14:00",
       endTime: "16:00",
-      classroom: "Aula MT23 (169 posti)",
+      classroomId: "mt1",
+      departmentId: "demacs",
       professorId: "prof-123",
       professorName: "Prof. Mario Rossi",
       equipment: ["Computer d'aula"],
@@ -172,7 +175,14 @@ describe("UNITICKET3-21 - Service bookingService", () => {
     expect(addDoc).toHaveBeenCalledWith(
       { name: "bookingRequest" },
       expect.objectContaining({
-        ...bookingData,
+        date: bookingData.date,
+        startTime: "14:00",
+        endTime: "16:00",
+        startsAt: expect.anything(),
+        endsAt: expect.anything(),
+        classroom: expect.objectContaining({ collection: "classrooms", id: "mt1" }),
+        department: expect.objectContaining({ collection: "departments", id: "demacs" }),
+        professor: expect.objectContaining({ collection: "users", id: "prof-123" }),
         status: "PENDING",
         createdAt: "TIMESTAMP_TEST",
       })
@@ -180,30 +190,35 @@ describe("UNITICKET3-21 - Service bookingService", () => {
   });
 });
 
-describe("UNITICKET3-21 - Interfaccia BookingRequestForm", () => {
-  it("mostra il modulo di prenotazione al professore nell'area personale", async () => {
-    renderPersonalArea(professorSession);
-
-    expect(await screen.findByRole("heading", { name: "Nuova Richiesta di Prenotazione" })).toBeTruthy();
-    expect(screen.getByLabelText(/Giorno \*/)).toBeTruthy();
-    expect(screen.getByLabelText(/Ora inizio \*/)).toBeTruthy();
-    expect(screen.getByLabelText(/Ora fine \*/)).toBeTruthy();
-    expect(screen.getByLabelText(/Aula \/ Laboratorio \*/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Invia richiesta" })).toBeTruthy();
-  });
-
-  it("non mostra il form di prenotazione docente a un utente ADMIN", async () => {
-    renderPersonalArea(adminSession);
+describe("UNITICKET3-21 - Interfaccia BookingRequestForm e Navigazione", () => {
+  it("mostra il link per nuova richiesta nell'Area Personale del professore", async () => {
+    renderApp("/personal-area", professorSession);
 
     expect(await screen.findByRole("heading", { name: "Area Personale" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Nuova Richiesta di Prenotazione" })).toBeNull();
+    expect(screen.getByRole("link", { name: "+ Nuova richiesta di prenotazione" })).toBeTruthy();
+  });
+
+  it("non mostra il link per nuova richiesta docente a un utente ADMIN", async () => {
+    renderApp("/personal-area", adminSession);
+
+    expect(await screen.findByRole("heading", { name: "Area Personale" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "+ Nuova richiesta di prenotazione" })).toBeNull();
     expect(screen.getByRole("link", { name: "Visualizza richieste di prenotazione" })).toBeTruthy();
   });
 
+  it("mostra il form e carica dinamicamente le aule nella pagina dedicata", async () => {
+    renderApp("/new-booking-request", professorSession);
+
+    expect(await screen.findByRole("heading", { name: "Nuova Richiesta di Prenotazione" })).toBeTruthy();
+    expect(await screen.findByRole("option", { name: /Aula MT1/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Aula MT23/ })).toBeTruthy();
+  });
+
   it("mostra un messaggio di errore se l'orario di fine è errato", async () => {
-    renderPersonalArea(professorSession);
+    renderApp("/new-booking-request", professorSession);
 
     await screen.findByRole("heading", { name: "Nuova Richiesta di Prenotazione" });
+    await screen.findByRole("option", { name: /Aula MT1/ });
 
     fireEvent.change(screen.getByLabelText(/Giorno \*/), {
       target: { value: getFutureDate(3) },
@@ -215,7 +230,7 @@ describe("UNITICKET3-21 - Interfaccia BookingRequestForm", () => {
       target: { value: "14:00" },
     });
     fireEvent.change(screen.getByLabelText(/Aula \/ Laboratorio \*/), {
-      target: { value: "Aula MT1 (144 posti)" },
+      target: { value: "mt1" },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Invia richiesta" }));
@@ -227,9 +242,10 @@ describe("UNITICKET3-21 - Interfaccia BookingRequestForm", () => {
   });
 
   it("invia con successo la richiesta e mostra il messaggio di conferma", async () => {
-    renderPersonalArea(professorSession);
+    renderApp("/new-booking-request", professorSession);
 
     await screen.findByRole("heading", { name: "Nuova Richiesta di Prenotazione" });
+    await screen.findByRole("option", { name: /Aula MT1/ });
 
     fireEvent.change(screen.getByLabelText(/Giorno \*/), {
       target: { value: getFutureDate(4) },
@@ -241,7 +257,7 @@ describe("UNITICKET3-21 - Interfaccia BookingRequestForm", () => {
       target: { value: "12:00" },
     });
     fireEvent.change(screen.getByLabelText(/Aula \/ Laboratorio \*/), {
-      target: { value: "Aula MT1 (144 posti)" },
+      target: { value: "mt1" },
     });
 
     // Seleziona un'attrezzatura
@@ -260,8 +276,9 @@ describe("UNITICKET3-21 - Interfaccia BookingRequestForm", () => {
         date: getFutureDate(4),
         startTime: "10:00",
         endTime: "12:00",
-        classroom: "Aula MT1 (144 posti)",
-        professorId: "prof-123",
+        classroom: expect.objectContaining({ id: "mt1" }),
+        department: expect.objectContaining({ id: "demacs" }),
+        professor: expect.objectContaining({ id: "prof-123" }),
         status: "PENDING",
         equipment: ["Computer d'aula"],
       })

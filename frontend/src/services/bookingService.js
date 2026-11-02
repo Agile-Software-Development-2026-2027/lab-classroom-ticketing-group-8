@@ -2,6 +2,7 @@ import {
   collection,
   addDoc,
   serverTimestamp,
+  Timestamp,
   doc,
   getDoc,
   getDocs,
@@ -33,9 +34,23 @@ export function validateBookingData(data) {
     throw new Error("I dati della richiesta sono obbligatori.");
   }
 
-  const { date, startTime, endTime, classroom, professorId } = data;
+  const {
+    date,
+    startTime,
+    endTime,
+    classroomId,
+    classroom,
+    departmentId,
+    department,
+    professorId,
+    professor,
+  } = data;
 
-  if (!date || !startTime || !endTime || !classroom || !professorId) {
+  const resolvedClassroomId = classroomId || (typeof classroom === "string" ? classroom : classroom?.id);
+  const resolvedDepartmentId = departmentId || (typeof department === "string" ? department : department?.id);
+  const resolvedProfessorId = professorId || (typeof professor === "string" ? professor : professor?.id);
+
+  if (!date || !startTime || !endTime || !resolvedClassroomId || !resolvedDepartmentId || !resolvedProfessorId) {
     throw new Error("Tutti i campi obbligatori devono essere compilati.");
   }
 
@@ -55,8 +70,43 @@ export function validateBookingData(data) {
 export async function createBookingRequest(bookingData) {
   validateBookingData(bookingData);
 
+  const {
+    date,
+    startTime,
+    endTime,
+    classroomId,
+    classroom,
+    departmentId,
+    department,
+    professorId,
+    professor,
+    professorName,
+    subject,
+    description,
+    equipment,
+  } = bookingData;
+
+  const resolvedClassroomId = classroomId || (typeof classroom === "string" ? classroom : classroom?.id);
+  const resolvedDepartmentId = departmentId || (typeof department === "string" ? department : department?.id);
+  const resolvedProfessorId = professorId || (typeof professor === "string" ? professor : professor?.id);
+
+  // Conversione orari in Timestamp Firestore
+  const startsAt = Timestamp.fromDate(new Date(`${date}T${startTime}:00`));
+  const endsAt = Timestamp.fromDate(new Date(`${date}T${endTime}:00`));
+
   const newBooking = {
-    ...bookingData,
+    date,
+    startTime,
+    endTime,
+    startsAt,
+    endsAt,
+    classroom: doc(db, "classrooms", resolvedClassroomId),
+    department: doc(db, "departments", resolvedDepartmentId),
+    professor: doc(db, "users", resolvedProfessorId),
+    professorName: professorName || "Docente",
+    subject: subject || "Prenotazione aula e laboratori",
+    description: description || "",
+    equipment: equipment || [],
     status: "PENDING",
     createdAt: serverTimestamp(),
   };
@@ -115,4 +165,3 @@ export async function getPendingBookingRequests() {
 
   return requests;
 }
-

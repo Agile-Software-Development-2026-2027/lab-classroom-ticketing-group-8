@@ -1,6 +1,5 @@
 import { Link } from "react-router";
 import { useAuth } from "../contexts/useAuth";
-import BookingRequestForm from "../components/booking/BookingRequestForm";
 
 export default function PersonalPage() {
   const { profile } = useAuth();
@@ -28,7 +27,20 @@ export default function PersonalPage() {
       )}
       {profile?.role === "PROFESSOR" && (
         <div style={{ marginTop: "24px" }}>
-          <BookingRequestForm />
+          <Link
+            to="/new-booking-request"
+            style={{
+              display: "inline-block",
+              padding: "12px 20px",
+              background: "#b71e24",
+              color: "#ffffff",
+              textDecoration: "none",
+              borderRadius: "6px",
+              fontWeight: 700,
+            }}
+          >
+            + Nuova richiesta di prenotazione
+          </Link>
         </div>
       )}
     </div>
