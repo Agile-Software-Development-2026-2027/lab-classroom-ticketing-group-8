@@ -4,17 +4,6 @@ import { createBookingRequest } from "../../services/bookingService";
 import useCalendarCatalog from "../../hooks/useCalendarCatalog";
 import "./BookingRequestForm.css";
 
-const AVAILABLE_EQUIPMENT = [
-  "Computer d'aula",
-  "Amplificazione audio",
-  "Videoproiettore / Presentazione",
-  "Connessione per gli ospiti",
-  "Videoconferenza",
-  "Lavagna in ardesia",
-  "Tavoletta grafica",
-  "Puntatore laser",
-];
-
 function getTomorrowDateString() {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -23,16 +12,19 @@ function getTomorrowDateString() {
 
 export default function BookingRequestForm() {
   const { user, profile } = useAuth();
-  const { classrooms, loading: catalogLoading, error: catalogError } = useCalendarCatalog();
+  const {
+    departments,
+    classrooms,
+    loading: catalogLoading,
+    error: catalogError,
+  } = useCalendarCatalog();
 
   // Stati per i campi del modulo
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+  const [selectedClassroomId, setSelectedClassroomId] = useState("");
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [selectedClassroomId, setSelectedClassroomId] = useState("");
-  const [subject, setSubject] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedEquipment, setSelectedEquipment] = useState([]);
 
   // Stati per messaggi di feedback e caricamento
   const [errorMessage, setErrorMessage] = useState("");
@@ -41,11 +33,10 @@ export default function BookingRequestForm() {
 
   const minDate = getTomorrowDateString();
 
-  function handleEquipmentToggle(item) {
-    setSelectedEquipment((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
-    );
-  }
+  // Filtra le aule appartenenti al dipartimento selezionato
+  const availableClassrooms = selectedDepartmentId
+    ? classrooms.filter((room) => room.departmentId === selectedDepartmentId)
+    : [];
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -57,41 +48,41 @@ export default function BookingRequestForm() {
       return;
     }
 
+    if (!selectedDepartmentId) {
+      setErrorMessage("Seleziona un dipartimento.");
+      return;
+    }
+
     if (!selectedClassroomId) {
       setErrorMessage("Seleziona un'aula o laboratorio.");
       return;
     }
 
-    // Trova l'aula selezionata per ricavarne il dipartimento
-    const selectedRoom = classrooms.find((room) => room.id === selectedClassroomId);
-    const departmentId = selectedRoom?.departmentId || "demacs";
-
     try {
       setIsSubmitting(true);
 
+      // professorName ricavato automaticamente dalla sessione/profilo collegato
+      const professorName =
+        profile?.displayName || user.displayName || user.email || "Docente";
+
       const bookingData = {
+        departmentId: selectedDepartmentId,
+        classroomId: selectedClassroomId,
         date,
         startTime,
         endTime,
-        classroomId: selectedClassroomId,
-        departmentId,
-        subject: subject || "Prenotazione aula e laboratori",
-        description,
-        equipment: selectedEquipment,
         professorId: user.uid,
-        professorName: profile?.displayName || user.email || "Docente",
+        professorName,
       };
 
       await createBookingRequest(bookingData);
 
       setSuccessMessage("Richiesta di prenotazione inviata con successo!");
+      setSelectedDepartmentId("");
+      setSelectedClassroomId("");
       setDate("");
       setStartTime("");
       setEndTime("");
-      setSelectedClassroomId("");
-      setSubject("");
-      setDescription("");
-      setSelectedEquipment([]);
     } catch (error) {
       setErrorMessage(error.message);
     } finally {
@@ -128,14 +119,54 @@ export default function BookingRequestForm() {
 
       <form onSubmit={handleSubmit} className="booking-form">
         <div className="form-group">
-          <label htmlFor="subject">Oggetto Richiesta</label>
-          <input
-            id="subject"
-            type="text"
-            placeholder="es. Prenotazione aule e laboratori"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-          />
+          <label htmlFor="department">Dipartimento *</label>
+          <select
+            id="department"
+            required
+            value={selectedDepartmentId}
+            disabled={catalogLoading}
+            onChange={(e) => {
+              setSelectedDepartmentId(e.target.value);
+              setSelectedClassroomId("");
+            }}
+          >
+            <option value="">
+              {catalogLoading
+                ? "-- Caricamento dipartimenti... --"
+                : "-- Seleziona un dipartimento --"}
+            </option>
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="classroom">Aula / Laboratorio *</label>
+          <select
+            id="classroom"
+            required
+            value={selectedClassroomId}
+            disabled={catalogLoading || !selectedDepartmentId}
+            onChange={(e) => setSelectedClassroomId(e.target.value)}
+          >
+            <option value="">
+              {!selectedDepartmentId
+                ? "-- Seleziona prima un dipartimento --"
+                : catalogLoading
+                ? "-- Caricamento aule... --"
+                : availableClassrooms.length === 0
+                ? "-- Nessuna aula disponibile per questo dipartimento --"
+                : "-- Seleziona un'aula o laboratorio --"}
+            </option>
+            {availableClassrooms.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name} {room.cubo ? `(Cubo ${room.cubo})` : ""}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="form-group">
@@ -174,56 +205,11 @@ export default function BookingRequestForm() {
           </div>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="classroom">Aula / Laboratorio *</label>
-          <select
-            id="classroom"
-            required
-            value={selectedClassroomId}
-            disabled={catalogLoading}
-            onChange={(e) => setSelectedClassroomId(e.target.value)}
-          >
-            <option value="">
-              {catalogLoading
-                ? "-- Caricamento aule dal database... --"
-                : "-- Seleziona un'aula o laboratorio --"}
-            </option>
-            {classrooms.map((room) => (
-              <option key={room.id} value={room.id}>
-                {room.name} {room.cubo ? `(Cubo ${room.cubo})` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label>Attrezzature richieste</label>
-          <div className="equipment-grid">
-            {AVAILABLE_EQUIPMENT.map((item) => (
-              <label key={item} className="equipment-checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={selectedEquipment.includes(item)}
-                  onChange={() => handleEquipmentToggle(item)}
-                />
-                <span>{item}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="description">Note all'evento / Richieste particolari</label>
-          <textarea
-            id="description"
-            rows="3"
-            placeholder="Indicare eventuali richieste straordinarie o note per il personale..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </div>
-
-        <button type="submit" className="submit-btn" disabled={isSubmitting || catalogLoading}>
+        <button
+          type="submit"
+          className="submit-btn"
+          disabled={isSubmitting || catalogLoading}
+        >
           {isSubmitting ? "Invio in corso..." : "Invia richiesta"}
         </button>
       </form>

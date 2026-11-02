@@ -22,18 +22,15 @@ rules_version = '2';
 //
 // Collection: bookingRequest
 // Document ID: {bookingId}
-// Fields:
-//   - date: string (required, "YYYY-MM-DD")
-//   - startTime: string (optional, "HH:mm")
-//   - endTime: string (optional, "HH:mm")
-//   - startsAt: timestamp (required)
-//   - endsAt: timestamp (required)
+// Strictly contains the following 8 fields:
 //   - classroom: reference to /databases/$(database)/documents/classrooms/{classroomId} (required)
 //   - department: reference to /databases/$(database)/documents/departments/{departmentId} (required)
 //   - professor: reference to /databases/$(database)/documents/users/{userId} (required)
-//   - professorId: string (optional, userId)
+//   - professorName: string (required)
+//   - date: string (required, "YYYY-MM-DD")
+//   - startsAt: timestamp (required)
+//   - endsAt: timestamp (required)
 //   - status: string (required, "PENDING" on creation)
-//   - createdAt: serverTimestamp (optional)
 //
 // ===============================================================
 
@@ -50,16 +47,40 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'PROFESSOR';
     }
 
-    function hasRequiredBookingFields() {
+    function hasStrictBookingFields() {
       return request.resource.data.keys().hasAll([
-        'date',
-        'startsAt',
-        'endsAt',
         'classroom',
         'department',
         'professor',
+        'professorName',
+        'date',
+        'startsAt',
+        'endsAt',
+        'status'
+      ]) && request.resource.data.keys().hasOnly([
+        'classroom',
+        'department',
+        'professor',
+        'professorName',
+        'date',
+        'startsAt',
+        'endsAt',
         'status'
       ]);
+    }
+
+    function isValidBookingData() {
+      return request.resource.data.classroom is path
+        && request.resource.data.department is path
+        && request.resource.data.professor is path
+        && request.resource.data.professorName is string
+        && request.resource.data.professorName.size() > 0
+        && request.resource.data.professorName.size() <= 100
+        && request.resource.data.date is string
+        && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.startsAt is timestamp
+        && request.resource.data.endsAt is timestamp
+        && request.resource.data.status is string;
     }
 
     match /users/{userId} { 
@@ -81,18 +102,11 @@ service cloud.firestore {
     match /bookingRequest/{bookingId} {
       allow read: if resource.data.status == 'APPROVED';
       allow create: if isProfessor()
-                    && (
-                      ('professorId' in request.resource.data && request.resource.data.professorId == request.auth.uid) ||
-                      ('professor' in request.resource.data && request.resource.data.professor == /databases/$(database)/documents/users/$(request.auth.uid))
-                    )
+                    && request.resource.data.professor == /databases/$(database)/documents/users/$(request.auth.uid)
                     && request.resource.data.status == 'PENDING'
-                    && hasRequiredBookingFields()
-                    && request.resource.data.startsAt < request.resource.data.endsAt
-                    && (
-                      !('startTime' in request.resource.data) ||
-                      !('endTime' in request.resource.data) ||
-                      request.resource.data.startTime < request.resource.data.endTime
-                    );
+                    && hasStrictBookingFields()
+                    && isValidBookingData()
+                    && request.resource.data.startsAt < request.resource.data.endsAt;
     }
     
     match /{document=**} {
