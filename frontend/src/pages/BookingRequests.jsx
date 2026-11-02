@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
-import { getPendingBookingRequests } from "../services/bookingService";
+import {
+  getPendingBookingRequests,
+  approveBookingRequest,
+  rejectBookingRequest,
+} from "../services/bookingService";
 import "./BookingRequests.css";
 
 export default function BookingRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [processingRequestId, setProcessingRequestId] = useState(null);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -37,6 +43,34 @@ export default function BookingRequests() {
     };
   }, []);
 
+  async function handleBookingAction(requestId, action) {
+    try {
+      setProcessingRequestId(requestId);
+      setError(null);
+      setSuccess(null);
+
+      if (action === "approve") {
+        await approveBookingRequest(requestId);
+        setSuccess("Richiesta approvata correttamente.");
+      } else {
+        await rejectBookingRequest(requestId);
+        setSuccess("Richiesta rifiutata correttamente.");
+      }
+
+      setRequests((currentRequests) =>
+        currentRequests.filter((request) => request.id !== requestId)
+      );
+    } catch (err) {
+      console.error("Errore nella gestione della richiesta:", err);
+
+      setError(
+        err.message || "Impossibile modificare la richiesta. Riprova."
+      );
+    } finally {
+      setProcessingRequestId(null);
+    }
+  }
+
   return (
     <div className="ur-booking-container">
       <header className="ur-booking-header">
@@ -56,6 +90,12 @@ export default function BookingRequests() {
       {error && !loading && (
         <div className="ur-message ur-message-error" role="alert">
           {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="ur-message ur-message-success" role="status">
+          {success}
         </div>
       )}
 
@@ -104,6 +144,30 @@ export default function BookingRequests() {
                     {request.startTime} - {request.endTime}
                   </span>
                 </div>
+              </div>
+
+              <div className="ur-request-actions">
+                <button
+                  type="button"
+                  className="ur-button ur-button-approve"
+                  disabled={processingRequestId !== null}
+                  onClick={() => handleBookingAction(request.id, "approve")}
+                >
+                  {processingRequestId === request.id
+                    ? "Elaborazione..."
+                    : "Approva"}
+                </button>
+
+                <button
+                  type="button"
+                  className="ur-button ur-button-reject"
+                  disabled={processingRequestId !== null}
+                  onClick={() => handleBookingAction(request.id, "reject")}
+                >
+                  {processingRequestId === request.id
+                    ? "Elaborazione..."
+                    : "Rifiuta"}
+                </button>
               </div>
             </li>
           ))}
