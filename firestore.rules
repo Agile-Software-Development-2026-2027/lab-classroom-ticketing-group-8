@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -31,7 +32,10 @@ service cloud.firestore {
 
     match /users/{userId} { 
       allow get: if isAuthenticated()
-                 && request.auth.uid == userId;
+                 && (
+                   request.auth.uid == userId
+                   || isAdmin()
+                 );
     }
 
     // Catalogo pubblico utilizzato dal calendario.
