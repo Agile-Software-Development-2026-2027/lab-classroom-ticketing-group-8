@@ -7,6 +7,7 @@ import {
   getDocs,
   query,
   where,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "../firebase/client";
 
@@ -116,3 +117,51 @@ export async function getPendingBookingRequests() {
   return requests;
 }
 
+export async function approveBookingRequest(requestId) {
+  if (!requestId) {
+    throw new Error("ID della richiesta obbligatorio.");
+  }
+
+  const bookingRef = doc(db, "bookingRequest", requestId);
+
+  await runTransaction(db, async (transaction) => {
+    const bookingSnapshot = await transaction.get(bookingRef);
+
+    if (!bookingSnapshot.exists()) {
+      throw new Error("Richiesta di prenotazione non trovata.");
+    }
+
+    if (bookingSnapshot.data().status !== "PENDING") {
+      throw new Error("È possibile approvare solo richieste in attesa.");
+    }
+
+    transaction.update(bookingRef, {
+      status: "APPROVED",
+    });
+  });
+}
+
+
+export async function rejectBookingRequest(requestId) {
+  if (!requestId) {
+    throw new Error("ID della richiesta obbligatorio.");
+  }
+
+  const bookingRef = doc(db, "bookingRequest", requestId);
+
+  await runTransaction(db, async (transaction) => {
+    const bookingSnapshot = await transaction.get(bookingRef);
+
+    if (!bookingSnapshot.exists()) {
+      throw new Error("Richiesta di prenotazione non trovata.");
+    }
+
+    if (bookingSnapshot.data().status !== "PENDING") {
+      throw new Error("È possibile rifiutare solo richieste in attesa.");
+    }
+
+    transaction.update(bookingRef, {
+      status: "REJECTED",
+    });
+  });
+}
