@@ -1,99 +1,73 @@
 rules_version = '2';
 
-// ===============================================================
-// Assumed Data Model
-// ===============================================================
-//
-// Collection: users
-// Document ID: {userId}
-// Fields:
-//   - role: string (required, 'PROFESSOR' | 'ADMIN')
-//   - email: string (optional)
-//   - displayName: string (optional)
-//   - universityId: string (optional)
-//
-// Collection: departments
-// Document ID: {departmentId}
-// Public read access for calendar catalog.
-//
-// Collection: classrooms
-// Document ID: {classroomId}
-// Public read access for calendar catalog.
-//
-// Collection: bookingRequest
-// Document ID: {bookingId}
-// Strictly contains the following 8 fields:
-//   - classroom: reference to /databases/$(database)/documents/classrooms/{classroomId} (required)
-//   - department: reference to /databases/$(database)/documents/departments/{departmentId} (required)
-//   - professor: reference to /databases/$(database)/documents/users/{userId} (required)
-//   - professorName: string (required)
-//   - date: string (required, "YYYY-MM-DD")
-//   - startsAt: timestamp (required)
-//   - endsAt: timestamp (required)
-//   - status: string (required, "PENDING" on creation)
-//
-// ===============================================================
+// Schema delle richieste:
+// classroom, department, professor: riferimenti Firestore.
+// professorName, date (YYYY-MM-DD), status: stringhe.
+// startsAt, endsAt: timestamp.
+// I ruoli sono letti da users/{uid}, non modificabile dal client.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
 
     function isProfessor() {
-      return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'PROFESSOR';
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'PROFESSOR';
     }
 
     function isAdmin() {
-      return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
     }
 
-    function hasStrictBookingFields() {
-      return request.resource.data.keys().hasAll([
-        'classroom',
-        'department',
-        'professor',
-        'professorName',
-        'date',
-        'startsAt',
-        'endsAt',
-        'status'
-      ]) && request.resource.data.keys().hasOnly([
-        'classroom',
-        'department',
-        'professor',
-        'professorName',
-        'date',
-        'startsAt',
-        'endsAt',
-        'status'
-      ]);
+    // Verifica collezione ed esistenza del documento referenziato.
+    function isValidReference(reference, collectionName) {
+      return reference is path
+        && reference == /databases/$(database)/documents/$(collectionName)/$(reference[4])
+        && exists(reference);
     }
 
     function isValidBookingData() {
-      return request.resource.data.classroom is path
-        && request.resource.data.department is path
-        && request.resource.data.professor is path
-        && request.resource.data.professorName is string
-        && request.resource.data.professorName.size() > 0
-        && request.resource.data.professorName.size() <= 100
-        && request.resource.data.date is string
-        && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
-        && request.resource.data.startsAt is timestamp
-        && request.resource.data.endsAt is timestamp
-        && request.resource.data.status is string;
+      let data = request.resource.data;
+      let fields = [
+        'classroom',
+        'department',
+        'professor',
+        'professorName',
+        'date',
+        'startsAt',
+        'endsAt',
+        'status'
+      ];
+
+      return data.keys().hasAll(fields)
+        && data.keys().hasOnly(fields)
+        && isValidReference(data.classroom, 'classrooms')
+        && isValidReference(data.department, 'departments')
+        && isValidReference(data.professor, 'users')
+        && get(data.classroom).data.department == data.department
+        && data.professorName is string
+        && data.professorName.size() > 0
+        && data.professorName.size() <= 100
+        && data.date is string
+        && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.startsAt is timestamp
+        && data.endsAt is timestamp
+        && data.startsAt < data.endsAt
+        && data.status in ['PENDING', 'APPROVED', 'REJECTED'];
     }
 
-    match /users/{userId} { 
+    // Ciascuno legge il proprio profilo.
+    // Gli admin possono leggere anche i profili dei docenti.
+    match /users/{userId} {
       allow get: if isAuthenticated()
-                 && request.auth.uid == userId;
+        && (request.auth.uid == userId || isAdmin());
     }
 
-    // Catalogo pubblico utilizzato dal calendario.
+    // Catalogo pubblico.
     match /departments/{departmentId} {
       allow read: if true;
     }
@@ -103,26 +77,26 @@ service cloud.firestore {
     }
 
     match /bookingRequest/{bookingId} {
-      // Il calendario pubblico mostra solo le prenotazioni approvate.
-      // L'amministratore può leggere anche quelle in attesa.
-      allow read: if resource.data.status == 'APPROVED' || isAdmin();
 
-      // Solo i professori autenticati possono creare una richiesta con stato PENDING.
+      // Pubblico: solo approvate. Admin: tutte le richieste.
+      allow read: if resource.data.status == 'APPROVED'
+        || isAdmin();
+
+      // Il professore crea richieste proprie in stato PENDING.
       allow create: if isProfessor()
-                    && request.resource.data.professor == /databases/$(database)/documents/users/$(request.auth.uid)
-                    && request.resource.data.status == 'PENDING'
-                    && hasStrictBookingFields()
-                    && isValidBookingData()
-                    && request.resource.data.startsAt < request.resource.data.endsAt;
+        && isValidBookingData()
+        && request.resource.data.professor == /databases/$(database)/documents/users/$(request.auth.uid)
+        && request.resource.data.status == 'PENDING';
 
-      // Solo l'amministratore può modificare richieste PENDING.
-      // Può modificare esclusivamente il campo status.
+      // L'admin approva o rifiuta cambiando soltanto lo stato.
       allow update: if isAdmin()
-                    && resource.data.status == 'PENDING'
-                    && request.resource.data.status in ['APPROVED', 'REJECTED']
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+        && isValidBookingData()
+        && resource.data.status == 'PENDING'
+        && request.resource.data.status in ['APPROVED', 'REJECTED']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
     }
-    
+
+    // Tutte le altre operazioni sono negate.
     match /{document=**} {
       allow read, write: if false;
     }
