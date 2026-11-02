@@ -202,6 +202,7 @@
 }
 
 
+
 /* ACTION BUTTONS */
 .ur-request-actions {
   display: flex;
@@ -214,13 +215,12 @@
 }
 
 .ur-button {
-  padding: 7px 12px;
-  font-size: 12px;
-  min-height: 32px;
-  border-radius: 6px;
   min-width: 120px;
+  padding: 11px 22px;
   border: 2px solid transparent;
+  border-radius: 8px;
   font-family: inherit;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition:
