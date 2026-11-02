@@ -1,7 +1,7 @@
 import {
   collection,
   addDoc,
-  serverTimestamp,
+  Timestamp,
   doc,
   getDoc,
   getDocs,
@@ -33,9 +33,31 @@ export function validateBookingData(data) {
     throw new Error("I dati della richiesta sono obbligatori.");
   }
 
-  const { date, startTime, endTime, classroom, professorId } = data;
+  const {
+    date,
+    startTime,
+    endTime,
+    classroomId,
+    classroom,
+    departmentId,
+    department,
+    professorId,
+    professor,
+  } = data;
 
-  if (!date || !startTime || !endTime || !classroom || !professorId) {
+  const resolvedClassroomId = classroomId || (typeof classroom === "string" ? classroom : classroom?.id);
+  const resolvedDepartmentId = departmentId || (typeof department === "string" ? department : department?.id);
+  const resolvedProfessorId = professorId || (typeof professor === "string" ? professor : professor?.id);
+
+  if (!resolvedDepartmentId) {
+    throw new Error("Il dipartimento è obbligatorio.");
+  }
+
+  if (!resolvedClassroomId) {
+    throw new Error("L'aula o laboratorio è obbligatoria.");
+  }
+
+  if (!date || !startTime || !endTime || !resolvedProfessorId) {
     throw new Error("Tutti i campi obbligatori devono essere compilati.");
   }
 
@@ -55,10 +77,37 @@ export function validateBookingData(data) {
 export async function createBookingRequest(bookingData) {
   validateBookingData(bookingData);
 
+  const {
+    date,
+    startTime,
+    endTime,
+    classroomId,
+    classroom,
+    departmentId,
+    department,
+    professorId,
+    professor,
+    professorName,
+  } = bookingData;
+
+  const resolvedClassroomId = classroomId || (typeof classroom === "string" ? classroom : classroom?.id);
+  const resolvedDepartmentId = departmentId || (typeof department === "string" ? department : department?.id);
+  const resolvedProfessorId = professorId || (typeof professor === "string" ? professor : professor?.id);
+
+  // Conversione orari in Timestamp Firestore
+  const startsAt = Timestamp.fromDate(new Date(`${date}T${startTime}:00`));
+  const endsAt = Timestamp.fromDate(new Date(`${date}T${endTime}:00`));
+
+  // I campi salvati sono ESCLUSIVAMENTE quelli previsti dalla struttura Cloud Firestore
   const newBooking = {
-    ...bookingData,
+    classroom: doc(db, "classrooms", resolvedClassroomId),
+    date,
+    department: doc(db, "departments", resolvedDepartmentId),
+    endsAt,
+    professor: doc(db, "users", resolvedProfessorId),
+    professorName: professorName || "Docente",
+    startsAt,
     status: "PENDING",
-    createdAt: serverTimestamp(),
   };
 
   const docRef = await addDoc(collection(db, "bookingRequest"), newBooking);
@@ -115,4 +164,3 @@ export async function getPendingBookingRequests() {
 
   return requests;
 }
-
