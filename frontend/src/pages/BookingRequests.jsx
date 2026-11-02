@@ -47,14 +47,11 @@ export default function BookingRequests() {
     try {
       setProcessingRequestId(requestId);
       setError(null);
-      setSuccess(null);
 
       if (action === "approve") {
         await approveBookingRequest(requestId);
-        setSuccess("Richiesta approvata correttamente.");
       } else {
         await rejectBookingRequest(requestId);
-        setSuccess("Richiesta rifiutata correttamente.");
       }
 
       setRequests((currentRequests) =>
