@@ -1,0 +1,47 @@
+.ur-professor-bookings-section {
+  margin-top: 36px;
+}
+
+.ur-professor-bookings-header {
+  margin-bottom: 24px;
+}
+
+.ur-professor-bookings-header h2 {
+  position: relative;
+  width: fit-content;
+  margin: 0 0 8px;
+  padding-bottom: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #252528;
+}
+
+.ur-professor-bookings-header h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 40px;
+  height: 4px;
+  background: #b71e24;
+  border-radius: 6px;
+}
+
+.ur-professor-bookings-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #607286;
+}
+
+.ur-badge-approved {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.ur-badge-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
