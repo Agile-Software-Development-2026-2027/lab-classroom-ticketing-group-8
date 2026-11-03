@@ -22,6 +22,7 @@ vi.mock("../services/calendarService", () => ({
 }));
 vi.mock("../services/bookingService", () => ({
   getPendingBookingRequests: async () => [],
+  getProfessorBookingRequests: async () => [],
 }));
 
 const guestSession = {

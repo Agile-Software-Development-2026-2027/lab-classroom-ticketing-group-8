@@ -190,7 +190,6 @@ export async function approveBookingRequest(requestId) {
   });
 }
 
-
 export async function rejectBookingRequest(requestId) {
   if (!requestId) {
     throw new Error("ID della richiesta obbligatorio.");
@@ -212,5 +211,65 @@ export async function rejectBookingRequest(requestId) {
     transaction.update(bookingRef, {
       status: "REJECTED",
     });
+  });
+}
+
+export async function getProfessorBookingRequests(professorId) {
+  if (!professorId) return [];
+
+  const requestsCollection = collection(db, "bookingRequest");
+  const profRef = doc(db, "users", professorId);
+  const professorQuery = query(
+    requestsCollection,
+    where("professor", "==", profRef)
+  );
+
+  const snapshot = await getDocs(professorQuery);
+  const docs = snapshot?.docs || [];
+
+  const requests = await Promise.all(
+    docs.map(async (docSnapshot) => {
+      const data = docSnapshot.data();
+
+      let classroom = "Aula";
+      if (data.classroom) {
+        if (typeof data.classroom === "string") {
+          classroom = data.classroom;
+        } else if (data.classroom.id) {
+          try {
+            const classroomDoc = await getDoc(data.classroom);
+            if (classroomDoc.exists()) {
+              const cData = classroomDoc.data();
+              classroom = cData.name
+                ? `${cData.name}${cData.cubo ? ` (Cubo ${cData.cubo})` : ""}`
+                : data.classroom.id;
+            } else {
+              classroom = data.classroom.id;
+            }
+          } catch {
+            classroom = data.classroom.id;
+          }
+        }
+      }
+
+      const startTime = formatTime(data.startsAt || data.startTime);
+      const endTime = formatTime(data.endsAt || data.endTime);
+
+      return {
+        id: docSnapshot.id,
+        classroom,
+        date: data.date || "",
+        startTime,
+        endTime,
+        status: data.status || "PENDING",
+      };
+    })
+  );
+
+  return requests.sort((a, b) => {
+    return (
+      (b.date || "").localeCompare(a.date || "") ||
+      (b.startTime || "").localeCompare(a.startTime || "")
+    );
   });
 }
