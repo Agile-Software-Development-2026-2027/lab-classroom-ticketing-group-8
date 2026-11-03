@@ -78,10 +78,10 @@ service cloud.firestore {
     }
 
     match /bookingRequest/{bookingId} {
-
-      // Pubblico: solo approvate. Admin: tutte le richieste.
+      // Pubblico: solo approvate. Admin: tutte le richieste. Professori: le proprie richieste.
       allow read: if resource.data.status == 'APPROVED'
-        || isAdmin();
+        || isAdmin()
+        || (isProfessor() && resource.data.professor == /databases/$(database)/documents/users/$(request.auth.uid));
 
       // Il professore crea richieste proprie in stato PENDING.
       allow create: if isProfessor()
