@@ -1,12 +1,6 @@
 
 rules_version = '2';
 
-// Schema delle richieste:
-// classroom, department, professor: riferimenti Firestore.
-// professorName, date (YYYY-MM-DD), status: stringhe.
-// startsAt, endsAt: timestamp.
-// I ruoli sono letti da users/{uid}, non modificabile dal client.
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -14,25 +8,37 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userProfile() {
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data;
+    }
+
     function isProfessor() {
       return isAuthenticated()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'PROFESSOR';
+        && userProfile().role == 'PROFESSOR';
     }
 
     function isAdmin() {
       return isAuthenticated()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+        && userProfile().role == 'ADMIN';
     }
 
-    // Verifica collezione ed esistenza del documento referenziato.
+    function isAssignedDepartment(departmentRef) {
+      return isAuthenticated()
+        && userProfile().get('department', null) == departmentRef;
+    }
+
     function isValidReference(reference, collectionName) {
       return reference is path
-        && reference == /databases/$(database)/documents/$(collectionName)/$(reference[4])
+        && reference ==
+          /databases/$(database)/documents/$(collectionName)/$(reference[4])
         && exists(reference);
     }
 
     function isValidBookingData() {
       let data = request.resource.data;
+
       let fields = [
         'classroom',
         'department',
@@ -61,14 +67,14 @@ service cloud.firestore {
         && data.status in ['PENDING', 'APPROVED', 'REJECTED'];
     }
 
-    // Ciascuno legge il proprio profilo.
-    // Gli admin possono leggere anche i profili dei docenti.
     match /users/{userId} {
       allow get: if isAuthenticated()
-        && (request.auth.uid == userId || isAdmin());
+        && (
+          request.auth.uid == userId
+          || isAdmin()
+        );
     }
 
-    // Catalogo pubblico.
     match /departments/{departmentId} {
       allow read: if true;
     }
@@ -78,26 +84,37 @@ service cloud.firestore {
     }
 
     match /bookingRequest/{bookingId} {
-      // Pubblico: solo approvate. Admin: tutte le richieste. Professori: le proprie richieste.
-      allow read: if resource.data.status == 'APPROVED'
-        || isAdmin()
-        || (isProfessor() && resource.data.professor == /databases/$(database)/documents/users/$(request.auth.uid));
 
-      // Il professore crea richieste proprie in stato PENDING.
-      allow create: if isProfessor()
+      allow read: if
+        resource.data.status == 'APPROVED'
+        || (
+          isAdmin()
+          && isAssignedDepartment(resource.data.department)
+        )
+        || (
+          isProfessor()
+          && resource.data.professor ==
+            /databases/$(database)/documents/users/$(request.auth.uid)
+        );
+
+      allow create: if
+        isProfessor()
         && isValidBookingData()
-        && request.resource.data.professor == /databases/$(database)/documents/users/$(request.auth.uid)
+        && isAssignedDepartment(request.resource.data.department)
+        && request.resource.data.professor ==
+          /databases/$(database)/documents/users/$(request.auth.uid)
         && request.resource.data.status == 'PENDING';
 
-      // L'admin approva o rifiuta cambiando soltanto lo stato.
-      allow update: if isAdmin()
+      allow update: if
+        isAdmin()
+        && isAssignedDepartment(resource.data.department)
         && isValidBookingData()
         && resource.data.status == 'PENDING'
         && request.resource.data.status in ['APPROVED', 'REJECTED']
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['status']);
     }
 
-    // Tutte le altre operazioni sono negate.
     match /{document=**} {
       allow read, write: if false;
     }

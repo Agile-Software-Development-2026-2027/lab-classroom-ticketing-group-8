@@ -1,15 +1,15 @@
+
 import { useState } from "react";
 import { useAuth } from "../../contexts/useAuth";
 import { createBookingRequest } from "../../services/bookingService";
 import useCalendarCatalog from "../../hooks/useCalendarCatalog";
+import { getAssignedDepartmentId } from "../../services/userService";
 import "./BookingRequestForm.css";
-
 function getTomorrowDateString() {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   return tomorrow.toISOString().split("T")[0];
 }
-
 export default function BookingRequestForm() {
   const { user, profile } = useAuth();
   const {
@@ -18,55 +18,55 @@ export default function BookingRequestForm() {
     loading: catalogLoading,
     error: catalogError,
   } = useCalendarCatalog();
-
-  // Stati per i campi del modulo
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState("");
+  const assignedDepartmentId = getAssignedDepartmentId(profile);
   const [selectedClassroomId, setSelectedClassroomId] = useState("");
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-
-  // Stati per messaggi di feedback e caricamento
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const minDate = getTomorrowDateString();
-
-  // Filtra le aule appartenenti al dipartimento selezionato
-  const availableClassrooms = selectedDepartmentId
-    ? classrooms.filter((room) => room.departmentId === selectedDepartmentId)
-    : [];
-
+  const visibleDepartments = departments.filter(
+    (dept) => dept.id === assignedDepartmentId
+  );
+  const departmentExists = visibleDepartments.length > 0;
+  const availableClassrooms = classrooms.filter(
+    (room) => room.departmentId === assignedDepartmentId
+  );
   async function handleSubmit(event) {
     event.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
-
     if (!user) {
       setErrorMessage("Devi essere autenticato come professore.");
       return;
     }
-
-    if (!selectedDepartmentId) {
-      setErrorMessage("Seleziona un dipartimento.");
+    if (profile?.role !== "PROFESSOR" || !assignedDepartmentId) {
+      setErrorMessage("Dipartimento non assegnato al professore.");
       return;
     }
-
+    if (!departmentExists) {
+      setErrorMessage("Dipartimento assegnato non disponibile.");
+      return;
+    }
     if (!selectedClassroomId) {
       setErrorMessage("Seleziona un'aula o laboratorio.");
       return;
     }
-
+    if (!availableClassrooms.some((room) => room.id === selectedClassroomId)) {
+      setErrorMessage("L'aula non appartiene al tuo dipartimento.");
+      return;
+    }
     try {
       setIsSubmitting(true);
-
-      // professorName ricavato automaticamente dalla sessione/profilo collegato
       const professorName =
-        profile?.displayName || user.displayName || user.email || "Docente";
-
+        profile?.displayName ||
+        user.displayName ||
+        user.email ||
+        "Docente";
       const bookingData = {
-        departmentId: selectedDepartmentId,
+        departmentId: assignedDepartmentId,
         classroomId: selectedClassroomId,
         date,
         startTime,
@@ -74,11 +74,8 @@ export default function BookingRequestForm() {
         professorId: user.uid,
         professorName,
       };
-
       await createBookingRequest(bookingData);
-
       setSuccessMessage("Richiesta di prenotazione inviata con successo!");
-      setSelectedDepartmentId("");
       setSelectedClassroomId("");
       setDate("");
       setStartTime("");
@@ -89,7 +86,6 @@ export default function BookingRequestForm() {
       setIsSubmitting(false);
     }
   }
-
   return (
     <div className="ur-booking-form-card">
       <div className="ur-form-header">
@@ -98,67 +94,53 @@ export default function BookingRequestForm() {
           Compila il modulo per richiedere l'assegnazione di un'aula o laboratorio didattico.
         </p>
       </div>
-
       {catalogError && (
         <div className="feedback-error" role="alert">
           {catalogError}
         </div>
       )}
-
       {errorMessage && (
         <div className="feedback-error" role="alert">
           {errorMessage}
         </div>
       )}
-
       {successMessage && (
         <div className="feedback-success" role="status">
           {successMessage}
         </div>
       )}
-
       <form onSubmit={handleSubmit} className="booking-form">
         <div className="form-group">
           <label htmlFor="department">Dipartimento *</label>
-          <select
-            id="department"
-            required
-            value={selectedDepartmentId}
-            disabled={catalogLoading}
-            onChange={(e) => {
-              setSelectedDepartmentId(e.target.value);
-              setSelectedClassroomId("");
-            }}
-          >
+          <select id="department" required value={assignedDepartmentId} disabled>
             <option value="">
               {catalogLoading
-                ? "-- Caricamento dipartimenti... --"
-                : "-- Seleziona un dipartimento --"}
+                ? "-- Caricamento dipartimento... --"
+                : "-- Dipartimento non assegnato --"}
             </option>
-            {departments.map((dept) => (
+            {visibleDepartments.map((dept) => (
               <option key={dept.id} value={dept.id}>
                 {dept.name}
               </option>
             ))}
           </select>
         </div>
-
         <div className="form-group">
           <label htmlFor="classroom">Aula / Laboratorio *</label>
           <select
             id="classroom"
             required
             value={selectedClassroomId}
-            disabled={catalogLoading || !selectedDepartmentId}
+            disabled={catalogLoading || !assignedDepartmentId || !departmentExists}
             onChange={(e) => setSelectedClassroomId(e.target.value)}
           >
             <option value="">
-              {!selectedDepartmentId
-                ? "-- Seleziona prima un dipartimento --"
+              {!assignedDepartmentId
+                ? "-- Dipartimento non assegnato --"
                 : catalogLoading
                 ? "-- Caricamento aule... --"
                 : availableClassrooms.length === 0
-                ? "-- Nessuna aula disponibile per questo dipartimento --"
+                ? "-- Nessuna aula disponibile --"
                 : "-- Seleziona un'aula o laboratorio --"}
             </option>
             {availableClassrooms.map((room) => (
@@ -168,7 +150,6 @@ export default function BookingRequestForm() {
             ))}
           </select>
         </div>
-
         <div className="form-group">
           <label htmlFor="date">Giorno * (minimo 1 giorno di preavviso)</label>
           <input
@@ -180,7 +161,6 @@ export default function BookingRequestForm() {
             onChange={(e) => setDate(e.target.value)}
           />
         </div>
-
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="startTime">Ora inizio *</label>
@@ -192,7 +172,6 @@ export default function BookingRequestForm() {
               onChange={(e) => setStartTime(e.target.value)}
             />
           </div>
-
           <div className="form-group">
             <label htmlFor="endTime">Ora fine *</label>
             <input
@@ -204,11 +183,15 @@ export default function BookingRequestForm() {
             />
           </div>
         </div>
-
         <button
           type="submit"
           className="submit-btn"
-          disabled={isSubmitting || catalogLoading}
+          disabled={
+            isSubmitting ||
+            catalogLoading ||
+            !assignedDepartmentId ||
+            !departmentExists
+          }
         >
           {isSubmitting ? "Invio in corso..." : "Invia richiesta"}
         </button>

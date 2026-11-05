@@ -1,4 +1,7 @@
+
 import { useEffect, useState } from "react";
+import { useAuth } from "../contexts/useAuth";
+import { getAssignedDepartmentId } from "../services/userService";
 import {
   getPendingBookingRequests,
   approveBookingRequest,
@@ -7,6 +10,8 @@ import {
 import "./BookingRequests.css";
 
 export default function BookingRequests() {
+  const { profile } = useAuth();
+  const departmentId = getAssignedDepartmentId(profile);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingRequestId, setProcessingRequestId] = useState(null);
@@ -20,14 +25,22 @@ export default function BookingRequests() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getPendingBookingRequests();
+        setRequests([]);
+
+        if (profile?.role !== "ADMIN" || !departmentId) {
+          throw new Error("Dipartimento amministratore non assegnato.");
+        }
+
+        const data = await getPendingBookingRequests(departmentId);
+
         if (isMounted) {
           setRequests(data);
         }
       } catch (err) {
         if (isMounted) {
-          setError("Impossibile caricare le richieste. Riprova più tardi.");
-          console.error("Errore nel caricamento delle richieste:", err);
+          setError(
+            err.message || "Impossibile caricare le richieste."
+          );
         }
       } finally {
         if (isMounted) {
@@ -41,12 +54,13 @@ export default function BookingRequests() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [departmentId, profile?.role]);
 
   async function handleBookingAction(requestId, action) {
     try {
       setProcessingRequestId(requestId);
       setError(null);
+      setSuccess(null);
 
       if (action === "approve") {
         await approveBookingRequest(requestId);
@@ -57,9 +71,13 @@ export default function BookingRequests() {
       setRequests((currentRequests) =>
         currentRequests.filter((request) => request.id !== requestId)
       );
-    } catch (err) {
-      console.error("Errore nella gestione della richiesta:", err);
 
+      setSuccess(
+        action === "approve"
+          ? "Richiesta approvata con successo."
+          : "Richiesta rifiutata con successo."
+      );
+    } catch (err) {
       setError(
         err.message || "Impossibile modificare la richiesta. Riprova."
       );
@@ -73,7 +91,8 @@ export default function BookingRequests() {
       <header className="ur-booking-header">
         <h1>Richieste di Prenotazione</h1>
         <p className="ur-booking-subtitle">
-          Elenco delle richieste di prenotazione aule in attesa di revisione.
+          Elenco delle richieste di prenotazione aule in attesa di revisione
+          per il tuo dipartimento.
         </p>
       </header>
 
@@ -122,19 +141,16 @@ export default function BookingRequests() {
                     {request.professorName}
                   </span>
                 </div>
-
                 <div className="ur-detail-row">
                   <span className="ur-detail-label">Matricola:</span>
                   <span className="ur-detail-value">
                     {request.professorUniversityId}
                   </span>
                 </div>
-
                 <div className="ur-detail-row">
                   <span className="ur-detail-label">Data:</span>
                   <span className="ur-detail-value">{request.date}</span>
                 </div>
-
                 <div className="ur-detail-row">
                   <span className="ur-detail-label">Orario:</span>
                   <span className="ur-detail-value">
@@ -154,7 +170,6 @@ export default function BookingRequests() {
                     ? "Elaborazione..."
                     : "Approva"}
                 </button>
-
                 <button
                   type="button"
                   className="ur-button ur-button-reject"
