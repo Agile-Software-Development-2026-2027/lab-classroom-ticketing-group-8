@@ -15,6 +15,9 @@ export default function BookingRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingRequestId, setProcessingRequestId] = useState(null);
+  const [requestToRejectId, setRequestToRejectId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionError, setRejectionError] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -56,16 +59,18 @@ export default function BookingRequests() {
     };
   }, [departmentId, profile?.role]);
 
-  async function handleBookingAction(requestId, action) {
+  async function handleBookingAction(requestId, action, reason ) {
     try {
       setProcessingRequestId(requestId);
       setError(null);
+      setRejectionError(null);
       setSuccess(null);
 
       if (action === "approve") {
         await approveBookingRequest(requestId);
       } else {
-        await rejectBookingRequest(requestId);
+        await rejectBookingRequest(requestId, reason)
+        setRequestToRejectId(null);
       }
 
       setRequests((currentRequests) =>
@@ -173,14 +178,45 @@ export default function BookingRequests() {
                 <button
                   type="button"
                   className="ur-button ur-button-reject"
-                  disabled={processingRequestId !== null}
-                  onClick={() => handleBookingAction(request.id, "reject")}
+                  disabled={processingRequestId !== null || requestToRejectId === request.id}
+                  onClick={() =>{
+                    setRequestToRejectId(request.id);
+                    setRejectionReason("");
+                    setRejectionError(null);
+                  }}
                 >
                   {processingRequestId === request.id
                     ? "Elaborazione..."
                     : "Rifiuta"}
                 </button>
               </div>
+
+              {requestToRejectId === request.id && (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleBookingAction(request.id, "reject", rejectionReason);
+                  }}
+                >
+                  <fieldset disabled={processingRequestId !== null}>
+                    <label>
+                      Motivazione del rifiuto
+                      <textarea
+                        value={rejectionReason}
+                        onChange={(event) => setRejectionReason(event.target.value)}
+                        required
+                      />
+                    </label>
+
+                    {rejectionError && <p role="alert">{rejectionError}</p>}
+
+                    <button type="button" onClick={() => setRequestToRejectId(null)}>
+                      Annulla
+                    </button>
+                    <button type="submit">Conferma rifiuto</button>
+                  </fieldset>
+                </form>
+              )}
             </li>
           ))}
         </ul>
