@@ -293,6 +293,7 @@ export async function getProfessorBookingRequests(professorId) {
         startTime,
         endTime,
         status: data.status || "PENDING",
+        reason: data.rejectionReason,
       };
     })
   );
