@@ -13,6 +13,13 @@ vi.mock("../services/authService", () => ({
   loginWithUniversityId: vi.fn(),
   logout: vi.fn(),
 }));
+
+
+vi.mock("../firebase/client", () => ({
+  auth: {},
+  db: {},
+}));
+
 vi.mock("../services/calendarService", () => ({
   getCalendarCatalog: async () => ({
     departments: [],

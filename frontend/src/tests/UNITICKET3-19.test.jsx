@@ -8,7 +8,10 @@ import {
   getCalendarCatalog,
   getCalendarBookings,
 } from "../services/calendarService";
-
+vi.mock("../firebase/client", () => ({
+  auth: {},
+  db: {},
+}));
 // Simuliamo il servizio per non usare Firestore.
 vi.mock("../services/calendarService", () => ({
   getCalendarCatalog: vi.fn(),

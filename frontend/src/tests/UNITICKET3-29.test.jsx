@@ -22,6 +22,11 @@ vi.mock("../services/calendarService", () => ({
   getCalendarBookings: vi.fn(async () => []),
 }));
 
+vi.mock("../firebase/client", () => ({
+  auth: {},
+  db: {},
+}));
+
 vi.mock("../services/bookingService", () => ({
   createBookingRequest: vi.fn(),
   getPendingBookingRequests: vi.fn(async () => []),
