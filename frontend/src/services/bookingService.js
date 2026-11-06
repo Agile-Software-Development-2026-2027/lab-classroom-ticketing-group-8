@@ -116,9 +116,23 @@ export async function createBookingRequest(bookingData) {
   return docRef.id;
 }
 
-export async function getPendingBookingRequests() {
+export async function getPendingBookingRequests(departmentId) {
+  if (!departmentId) {
+    throw new Error("Dipartimento amministratore non assegnato.");
+  }
+
   const requestsCollection = collection(db, "bookingRequest");
-  const pendingQuery = query(requestsCollection, where("status", "==", "PENDING"));
+
+  const pendingQuery = query(
+    requestsCollection,
+    where("status", "==", "PENDING"),
+    where(
+      "department",
+      "==",
+      doc(db, "departments", departmentId)
+    )
+  );
+
   const snapshot = await getDocs(pendingQuery);
 
   const requests = await Promise.all(
@@ -127,7 +141,9 @@ export async function getPendingBookingRequests() {
 
       const classroom =
         data.classroom?.id ||
-        (typeof data.classroom === "string" ? data.classroom : "Aula");
+        (typeof data.classroom === "string"
+          ? data.classroom
+          : "Aula");
 
       let professorUniversityId = data.professorUniversityId || "";
 
@@ -139,25 +155,25 @@ export async function getPendingBookingRequests() {
               : data.professor;
 
           const profSnapshot = await getDoc(profDocRef);
+
           if (profSnapshot.exists()) {
-            professorUniversityId = profSnapshot.data().universityId || "";
+            professorUniversityId =
+              profSnapshot.data().universityId || "";
           }
         } catch {
           professorUniversityId = data.professor?.id || "";
         }
       }
 
-      const startTime = formatTime(data.startsAt || data.startTime);
-      const endTime = formatTime(data.endsAt || data.endTime);
-
       return {
         id: docSnapshot.id,
         classroom,
         date: data.date || "",
         professorName: data.professorName || "Docente",
-        professorUniversityId: professorUniversityId || "N/D",
-        startTime,
-        endTime,
+        professorUniversityId:
+          professorUniversityId || "N/D",
+        startTime: formatTime(data.startsAt || data.startTime),
+        endTime: formatTime(data.endsAt || data.endTime),
         status: data.status,
       };
     })
@@ -165,6 +181,7 @@ export async function getPendingBookingRequests() {
 
   return requests;
 }
+
 
 export async function approveBookingRequest(requestId) {
   if (!requestId) {

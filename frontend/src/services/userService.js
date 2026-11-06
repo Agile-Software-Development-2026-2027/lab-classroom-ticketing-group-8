@@ -12,3 +12,11 @@ export async function getUserProfile(uid) {
   //console.log("User profile data:", snapshot.data()); user profile data: email,role,displayName,universityId
   return snapshot.data();
 }
+
+export function getAssignedDepartmentId(profile) {
+  if (!["PROFESSOR", "ADMIN"].includes(profile?.role)) {
+    return "";
+  }
+
+  return profile.department?.id ?? "";
+}

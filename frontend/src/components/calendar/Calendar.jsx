@@ -1,58 +1,82 @@
-import { useRef, useState } from "react";
-import "./Calendar.css";
 
+import { useContext, useEffect, useRef, useState } from "react";
+import "./Calendar.css";
 import CalendarToolbar from "./toolbar/CalendarToolBar";
 import CalendarDayDetails from "./grid/calendarDayDetails/CalendarDayDetails";
-import CalendarGrid from "./grid/CalendarGrid"
-
+import CalendarGrid from "./grid/CalendarGrid";
 import useCalendarBookings from "../../hooks/useCalendarBookings";
-
 import CalendarFilters from "./filters/CalendarFilters";
-
 import useCalendarCatalog from "../../hooks/useCalendarCatalog";
-// Funzione usata solo qui: restituisce una data locale YYYY-MM-DD.
+import { AuthContext } from "../../contexts/AuthContextValue";
+import { getAssignedDepartmentId } from "../../services/userService";
 function dateKey(date) {
   return [
-  String(date.getFullYear()).padStart(4, "0"),
-  String(date.getMonth() + 1).padStart(2, "0"),
-  String(date.getDate()).padStart(2, "0"),
+    String(date.getFullYear()).padStart(4, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
   ].join("-");
 }
 export default function Calendar() {
-  
+  const session = useContext(AuthContext);
+  const authLoading = Boolean(session?.loading);
+  const isRestricted = ["PROFESSOR", "ADMIN"].includes(session?.profile?.role);
+  const assignedDepartmentId = getAssignedDepartmentId(session?.profile);
   const {
     departments,
     classrooms,
+    loading: catalogLoading,
     error: catalogError,
   } = useCalendarCatalog();
-
   const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [today, setToday] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState(null);
-  const [departmentId, setDepartmentId] = useState("");
+  const [guestDepartmentId, setGuestDepartmentId] = useState("");
   const [classroomId, setClassroomId] = useState("");
   const lastDayButton = useRef(null);
+  const visibleDepartments = authLoading
+    ? []
+    : isRestricted
+    ? departments.filter((dept) => dept.id === assignedDepartmentId)
+    : departments;
+  const departmentId = authLoading
+    ? ""
+    : isRestricted
+    ? visibleDepartments[0]?.id ?? ""
+    : guestDepartmentId;
+  const visibleClassrooms = authLoading
+    ? []
+    : isRestricted
+    ? classrooms.filter((room) => room.departmentId === departmentId)
+    : classrooms;
+  const activeClassroomId = visibleClassrooms.some(
+    (room) => room.id === classroomId && room.departmentId === departmentId
+  )
+    ? classroomId
+    : "";
+  useEffect(() => {
+    setGuestDepartmentId("");
+    setClassroomId("");
+    setSelectedDay(null);
+  }, [isRestricted, assignedDepartmentId]);
   const firstDate = new Date(referenceDate);
-
   const hasDepartment = departmentId !== "";
   const filterMessage = hasDepartment
-  ? ""
-  : "Seleziona un dipartimento per visualizzare le prenotazioni.";
-
+    ? ""
+    : authLoading || catalogLoading
+    ? "Caricamento dipartimenti..."
+    : isRestricted
+    ? "Dipartimento assegnato non disponibile."
+    : "Seleziona un dipartimento per visualizzare le prenotazioni.";
   firstDate.setHours(0, 0, 0, 0);
   firstDate.setDate(1);
-  // getDay usa domenica=0; trasformiamo lunedi nel primo giorno.
   firstDate.setDate(firstDate.getDate() - (firstDate.getDay() + 6) % 7);
   const days = Array.from({ length: 42 }, (_, index) => {
     const date = new Date(firstDate);
     date.setDate(date.getDate() + index);
     return { date, dateKey: dateKey(date) };
   });
-  
-  // Il periodo comprende tutte le 42 celle visibili.
   const endDate = new Date(firstDate);
   endDate.setDate(endDate.getDate() + days.length);
-
   const {
     bookings: loadedBookings,
     loading: bookingsLoading,
@@ -64,58 +88,51 @@ export default function Calendar() {
     departments,
     classrooms,
   });
-
   const message = catalogError || bookingsError || filterMessage;
-
-  // Manteniamo il filtro aula nell'interfaccia.
-  const bookings = loadedBookings.filter((booking) => {
-    return (
+  const bookings = loadedBookings.filter(
+    (booking) =>
       hasDepartment &&
       booking.departmentId === departmentId &&
-      (!classroomId || booking.classroomId === classroomId)
-    );
+      (!activeClassroomId || booking.classroomId === activeClassroomId)
+  );
+  
+  function changeDate(date) {
+    setToday(new Date());
+    setReferenceDate(date);
+    setSelectedDay(null);
+  }
+
+  function changeMonth(amount) {
+    const next = new Date(referenceDate);
+    next.setDate(1);
+    next.setMonth(next.getMonth() + amount);
+    changeDate(next);
+  }
+
+  function openDay(day, button) {
+    lastDayButton.current = button;
+    setSelectedDay(day);
+  }
+
+  function closeDay() {
+    setSelectedDay(null);
+    lastDayButton.current?.focus();
+  }
+
+  function changeDepartment(nextDepartmentId) {
+    if (isRestricted || authLoading) return;
+    setGuestDepartmentId(nextDepartmentId);
+    setClassroomId("");
+    setSelectedDay(null);
+  }
+
+  const periodLabel = referenceDate.toLocaleDateString("it-IT", {
+    month: "long",
+    year: "numeric",
   });
 
-  function changeDate(date) {
-      setToday(new Date());
-      setReferenceDate(date);
-      setSelectedDay(null);
-  }
-  function changeMonth(amount) {
-      const next = new Date(referenceDate);
-      next.setDate(1);
-      next.setMonth(next.getMonth() + amount);
-      changeDate(next);
-  }
-  function openDay(day, button) {
-      lastDayButton.current = button;
-      setSelectedDay(day);
-  }
-  function closeDay() {
-      setSelectedDay(null);
-      lastDayButton.current?.focus();
-  }
-  function changeDepartment(nextDepartmentId) {
-      setDepartmentId(nextDepartmentId);
-
-      // L'aula precedente potrebbe appartenere a un altro dipartimento.
-      setClassroomId("");
-  }
-  const periodLabel = referenceDate.toLocaleDateString("it-IT", {
-      month: "long",
-      year: "numeric",
-  }
-  ); 
   return (
     <section className="classroom-calendar" aria-label="Calendario delle aule">
-      {/* TODO: ripristinare il passaggio dati al datepicker nel componente tool bar
-      <CalendarToolbar
-        referenceDate={referenceDate} periodLabel={periodLabel}
-        onPrevious={() => changeMonth(-1)} onNext={() => changeMonth(1)}
-        onToday={() => changeDate(new Date())} onDateChange={changeDate}
-      />
-      */}
-
       <CalendarToolbar
         periodLabel={periodLabel}
         onPrevious={() => changeMonth(-1)}
@@ -123,10 +140,11 @@ export default function Calendar() {
         onToday={() => changeDate(new Date())}
       />
       <CalendarFilters
-        departments={departments}
-        classrooms={classrooms}
+        departments={visibleDepartments}
+        classrooms={visibleClassrooms}
         departmentId={departmentId}
-        classroomId={classroomId}
+        classroomId={activeClassroomId}
+        departmentDisabled={authLoading || isRestricted}
         onDepartmentChange={changeDepartment}
         onClassroomChange={setClassroomId}
       />
@@ -148,10 +166,16 @@ export default function Calendar() {
           {message}
         </p>
       )}
-      <CalendarGrid days={days} today={today} view="month"
-        referenceDate={referenceDate} bookings={bookings}
-        selectedDay={selectedDay} showCounts={ hasDepartment && !bookingsLoading && !bookingsError } onSelectDay={openDay}
+      <CalendarGrid
+        days={days}
+        today={today}
+        view="month"
+        referenceDate={referenceDate}
+        bookings={bookings}
+        selectedDay={selectedDay}
+        showCounts={hasDepartment && !bookingsLoading && !bookingsError}
+        onSelectDay={openDay}
       />
-</section>
-);
+    </section>
+  );
 }

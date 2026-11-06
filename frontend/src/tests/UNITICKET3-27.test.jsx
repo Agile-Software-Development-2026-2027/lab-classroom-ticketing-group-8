@@ -7,7 +7,10 @@ import App from "../App";
 import { AuthContext } from "../contexts/AuthContextValue";
 import { logout } from "../services/authService";
 
-
+vi.mock("../firebase/client", () => ({
+  auth: {},
+  db: {},
+}));
 // servizi mockati per non collegarci a Firebase.
 vi.mock("../services/authService", () => ({
   loginWithUniversityId: vi.fn(),
