@@ -95,35 +95,42 @@ export default function Calendar() {
       booking.departmentId === departmentId &&
       (!activeClassroomId || booking.classroomId === activeClassroomId)
   );
+  
   function changeDate(date) {
     setToday(new Date());
     setReferenceDate(date);
     setSelectedDay(null);
   }
+
   function changeMonth(amount) {
     const next = new Date(referenceDate);
     next.setDate(1);
     next.setMonth(next.getMonth() + amount);
     changeDate(next);
   }
+
   function openDay(day, button) {
     lastDayButton.current = button;
     setSelectedDay(day);
   }
+
   function closeDay() {
     setSelectedDay(null);
     lastDayButton.current?.focus();
   }
+
   function changeDepartment(nextDepartmentId) {
     if (isRestricted || authLoading) return;
     setGuestDepartmentId(nextDepartmentId);
     setClassroomId("");
     setSelectedDay(null);
   }
+
   const periodLabel = referenceDate.toLocaleDateString("it-IT", {
     month: "long",
     year: "numeric",
   });
+
   return (
     <section className="classroom-calendar" aria-label="Calendario delle aule">
       <CalendarToolbar
