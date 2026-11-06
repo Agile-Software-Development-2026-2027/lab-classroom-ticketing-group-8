@@ -208,12 +208,20 @@ export default function BookingRequests() {
                       />
                     </label>
 
-                    {rejectionError && <p role="alert">{rejectionError}</p>}
+                    {rejectionError && < p className="ur-message ur-message-error" role="alert">{rejectionError}</p>}
 
-                    <button type="button" onClick={() => setRequestToRejectId(null)}>
-                      Annulla
-                    </button>
-                    <button type="submit">Conferma rifiuto</button>
+                    <div className="ur-request-actions">
+                      <button
+                        type="button"
+                        className="ur-button ur-button-cancel"
+                        onClick={() => setRequestToRejectId(null)}
+                      >
+                        Annulla
+                      </button>
+                      <button type="submit" className="ur-button ur-button-reject">
+                        Conferma rifiuto
+                      </button>
+                    </div>
                   </fieldset>
                 </form>
               )}

@@ -289,3 +289,65 @@
     width: 100%;
   }
 }
+
+.ur-rejection-form {
+  margin-top: 16px;
+}
+
+.ur-rejection-form fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--ur-border);
+  border-radius: 10px;
+  background: var(--ur-bg);
+}
+
+.ur-rejection-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ur-rejection-form textarea {
+  width: 100%;
+  min-height: 104px;
+  padding: 10px 12px;
+  border: 1px solid var(--ur-muted);
+  border-radius: 8px;
+  background: var(--ur-card-bg);
+  color: var(--ur-text);
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.ur-rejection-form textarea:focus-visible {
+  outline: 2px solid var(--ur-red);
+  outline-offset: 2px;
+}
+
+.ur-rejection-form .ur-message {
+  margin: 0;
+}
+
+.ur-rejection-form .ur-request-actions {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.ur-rejection-form .ur-button-cancel {
+  background: var(--ur-card-bg);
+  color: var(--ur-text);
+  border-color: var(--ur-border);
+}
+
+.ur-rejection-form .ur-button-cancel:hover:not(:disabled) {
+  border-color: var(--ur-muted);
+  background: var(--ur-bg);
+}
