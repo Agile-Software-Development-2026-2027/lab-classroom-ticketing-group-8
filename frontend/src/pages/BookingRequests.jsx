@@ -83,10 +83,15 @@ export default function BookingRequests() {
           : "Richiesta rifiutata con successo."
       );
     } catch (err) {
-      setError(
-        err.message || "Impossibile modificare la richiesta. Riprova."
-      );
-    } finally {
+      const message =
+        err.message || "Impossibile modificare la richiesta. Riprova.";
+
+      if (action === "reject") {
+        setRejectionError(message);
+      } else {
+        setError(message);
+      }
+    }finally {
       setProcessingRequestId(null);
     }
   }
