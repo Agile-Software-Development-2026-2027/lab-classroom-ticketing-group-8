@@ -1,4 +1,3 @@
-
 name: CI
 
 on:
@@ -17,8 +16,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -29,10 +27,10 @@ jobs:
       - name: Run lint
         working-directory: frontend
         run: npm run lint
-      - name: Build React application
+      - name: Build application
         working-directory: frontend
         run: npm run build
-      - name: Verify build output
+      - name: Verify build
         run: test -f frontend/dist/index.html
 
   auth:
@@ -40,8 +38,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -49,7 +46,7 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      - name: Run authentication tests
+      - name: Run auth tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-16.test.jsx
 
@@ -58,8 +55,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -67,7 +63,7 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      - name: Run home navigation tests
+      - name: Run navigation tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-27.test.jsx
 
@@ -76,8 +72,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -85,7 +80,7 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      - name: Run administrator authentication tests
+      - name: Run admin auth tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-18.test.jsx
 
@@ -94,8 +89,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -112,8 +106,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -121,7 +114,7 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      - name: Run admin booking requests tests
+      - name: Run admin requests tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-20.test.jsx
 
@@ -130,8 +123,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -139,7 +131,7 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      - name: Run submit booking request tests
+      - name: Run booking submission tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-21.test.jsx
 
@@ -148,8 +140,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -157,7 +148,7 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      - name: Run booking approval and rejection tests
+      - name: Run booking approval tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-23.test.jsx
 
@@ -166,8 +157,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -184,21 +174,19 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-      - name: Run Story 29 Firestore Rules tests
+      - name: Run Story 29 Firestore tests
         env:
           REQUIRE_FIRESTORE_RULES: "1"
         run: |
@@ -206,6 +194,49 @@ jobs:
             --only firestore \
             --project demo-uniticket29 \
             "cd frontend && npm run test -- src/tests/UNITICKET3-29.rules.test.js"
+
+  operating_hours_frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Task 34 frontend tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET3-34.test.js
+
+  operating_hours_firestore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Task 34 Firestore tests
+        env:
+          REQUIRE_FIRESTORE_RULES: "1"
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --only firestore \
+            --project demo-uniticket34 \
+            "cd frontend && npm run test -- src/tests/UNITICKET3-34.rules.test.js"
 
   test:
     needs:
@@ -219,6 +250,8 @@ jobs:
       - booking_approval_rejection
       - department_frontend
       - department_firestore
+      - operating_hours_frontend
+      - operating_hours_firestore
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -235,3 +268,5 @@ jobs:
           test "${{ needs.booking_approval_rejection.result }}" = "success"
           test "${{ needs.department_frontend.result }}" = "success"
           test "${{ needs.department_firestore.result }}" = "success"
+          test "${{ needs.operating_hours_frontend.result }}" = "success"
+          test "${{ needs.operating_hours_firestore.result }}" = "success"
