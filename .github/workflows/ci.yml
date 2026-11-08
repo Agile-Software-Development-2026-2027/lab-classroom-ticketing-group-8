@@ -206,6 +206,60 @@ jobs:
             --only firestore \
             --project demo-uniticket29 \
             "cd frontend && npm run test -- src/tests/UNITICKET3-29.rules.test.js"
+  
+  rejection_reason_frontend:
+    name: Story 45 - Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Story 45 frontend tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET-45.test.jsx
+
+  rejection_reason_firestore:
+    name: Story 45 - Firestore Rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Story 45 Firestore Rules tests
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --only firestore \
+            --project demo-uniticket45 \
+            "npm --prefix frontend run test -- src/tests/UNITICKET3-45.rules.test.js"
+  
 
   test:
     needs:
@@ -219,6 +273,8 @@ jobs:
       - booking_approval_rejection
       - department_frontend
       - department_firestore
+      - rejection_reason_frontend
+      - rejection_reason_firestore
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -235,3 +291,5 @@ jobs:
           test "${{ needs.booking_approval_rejection.result }}" = "success"
           test "${{ needs.department_frontend.result }}" = "success"
           test "${{ needs.department_firestore.result }}" = "success"
+          test "${{ needs.rejection_reason_frontend.result }}" = "success"
+          test "${{ needs.rejection_reason_firestore.result }}" = "success"
