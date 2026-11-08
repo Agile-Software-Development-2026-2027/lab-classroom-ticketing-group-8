@@ -1,41 +1,69 @@
 
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function isAuthenticated() {
       return request.auth != null;
     }
-
     function userProfile() {
       return get(
         /databases/$(database)/documents/users/$(request.auth.uid)
       ).data;
     }
-
     function isProfessor() {
-      return isAuthenticated()
-        && userProfile().role == 'PROFESSOR';
+      return isAuthenticated() && userProfile().role == 'PROFESSOR';
     }
-
     function isAdmin() {
-      return isAuthenticated()
-        && userProfile().role == 'ADMIN';
+      return isAuthenticated() && userProfile().role == 'ADMIN';
     }
-
     function isAssignedDepartment(departmentRef) {
       return isAuthenticated()
         && userProfile().get('department', null) == departmentRef;
     }
-
     function isValidReference(reference, collectionName) {
       return reference is path
         && reference ==
           /databases/$(database)/documents/$(collectionName)/$(reference[4])
         && exists(reference);
     }
-
+    function isDaylightSaving(t) {
+      let year = t.year();
+      let marchSunday =
+        31 - (timestamp.date(year, 3, 31).dayOfWeek() % 7);
+      let octoberSunday =
+        31 - (timestamp.date(year, 10, 31).dayOfWeek() % 7);
+      return t >= timestamp.date(year, 3, marchSunday) + duration.value(1, 'h')
+        && t < timestamp.date(year, 10, octoberSunday) + duration.value(1, 'h');
+    }
+    function toRomeTime(t) {
+      return t + duration.value(
+        isDaylightSaving(t) ? 2 : 1,
+        'h'
+      );
+    }
+    function pad2(number) {
+      return number < 10 ? '0' + string(number) : string(number);
+    }
+    function localDateKey(t) {
+      return string(t.year()) + '-' + pad2(t.month()) + '-' + pad2(t.day());
+    }
+    function isValidUniversityHours() {
+      let data = request.resource.data;
+      let localStart = toRomeTime(data.startsAt);
+      let localEnd = toRomeTime(data.endsAt);
+      let startMinutes = localStart.hours() * 60 + localStart.minutes();
+      let endMinutes = localEnd.hours() * 60 + localEnd.minutes();
+      return localDateKey(localStart) == data.date
+        && localStart.date() == localEnd.date()
+        && startMinutes >= 510
+        && startMinutes <= 1110
+        && endMinutes <= 1170
+        && data.endsAt - data.startsAt >= duration.value(60, 'm')
+        && data.startsAt.seconds() == 0
+        && data.endsAt.seconds() == 0
+        && data.startsAt.nanos() == 0
+        && data.endsAt.nanos() == 0;
+    }
     function isValidBookingData() {
       let data = request.resource.data;
       let reason = data.get('rejectionReason', '');
@@ -51,7 +79,6 @@ service cloud.firestore {
         'status',
 
       ];
-
       return data.keys().hasAll(fields)
         && data.keys().hasOnly(fields.concat(['rejectionReason']))
         && isValidReference(data.classroom, 'classrooms')
@@ -73,47 +100,32 @@ service cloud.firestore {
           ? reason.trim().size() > 0
           : reason == '');
     }
-
     match /users/{userId} {
       allow get: if isAuthenticated()
-        && (
-          request.auth.uid == userId
-          || isAdmin()
-        );
+        && (request.auth.uid == userId || isAdmin());
     }
-
     match /departments/{departmentId} {
       allow read: if true;
     }
-
     match /classrooms/{classroomId} {
       allow read: if true;
     }
-
     match /bookingRequest/{bookingId} {
-
-      allow read: if
-        resource.data.status == 'APPROVED'
-        || (
-          isAdmin()
-          && isAssignedDepartment(resource.data.department)
-        )
+      allow read: if resource.data.status == 'APPROVED'
+        || (isAdmin() && isAssignedDepartment(resource.data.department))
         || (
           isProfessor()
           && resource.data.professor ==
             /databases/$(database)/documents/users/$(request.auth.uid)
         );
-
-      allow create: if
-        isProfessor()
+      allow create: if isProfessor()
         && isValidBookingData()
+        && isValidUniversityHours()
         && isAssignedDepartment(request.resource.data.department)
         && request.resource.data.professor ==
           /databases/$(database)/documents/users/$(request.auth.uid)
         && request.resource.data.status == 'PENDING';
-
-      allow update: if
-        isAdmin()
+      allow update: if isAdmin()
         && isAssignedDepartment(resource.data.department)
         && isValidBookingData()
         && resource.data.status == 'PENDING'
@@ -124,7 +136,6 @@ service cloud.firestore {
             : ['status']
         );
     }
-
     match /{document=**} {
       allow read, write: if false;
     }
