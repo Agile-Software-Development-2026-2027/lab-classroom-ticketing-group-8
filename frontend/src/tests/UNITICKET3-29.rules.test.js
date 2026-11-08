@@ -127,4 +127,23 @@ describe.skipIf(!emulatorHost)("UNITICKET3-29 - Firestore Rules", () => {
       otherRequest.update({ status: "APPROVED" })
     );
   });
+
+  it("salva il rifiuto e permette al docente di leggee il motivo", async () =>{
+    const adminDb = testEnv.authenticatedContext("admin1").firestore();
+    const decision = {
+      status: "REJECTED",
+      rejectionReason: "Aula già occupata",
+    };
+
+    await assertSucceeds(
+      adminDb.doc("bookingRequest/req-demacs").update(decision)
+    );
+
+    const professorDb = testEnv.authenticatedContext("prof1").firestore();
+    const snapshot = await assertSucceeds(
+      professorDb.doc("bookingRequest/req-demacs").get()
+    );
+
+    expect(snapshot.data()).toMatchObject(decision);
+  });
 });
