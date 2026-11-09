@@ -103,19 +103,19 @@ export default function Calendar() {
   }
 
   function changeMonth(amount) {
-    const next = new Date(referenceDate);
-    next.setDate(1);
-    next.setMonth(next.getMonth() + amount);
-    changeDate(next);
+    const next = new Date(referenceDate);//copiamo l'attuale cosi da non modificare il riferimento
+    next.setDate(1);//la metto al primo giorno per evitare problemi qualsiasi
+    next.setMonth(next.getMonth() + amount);//cambio solo il mese
+    changeDate(next);//reimposto la reference con la date con il mese cambiato
   }
 
   function openDay(day, button) {
     lastDayButton.current = button;
-    setSelectedDay(day);
+    setSelectedDay(day);//se null non viene mostrtato nulla come da condizione jsx
   }
 
   function closeDay() {
-    setSelectedDay(null);
+    setSelectedDay(null);//imposta a null per chiudere la lista dettaglio
     lastDayButton.current?.focus();
   }
 
@@ -135,9 +135,11 @@ export default function Calendar() {
     <section className="classroom-calendar" aria-label="Calendario delle aule">
       <CalendarToolbar
         periodLabel={periodLabel}
-        onPrevious={() => changeMonth(-1)}
+        onPrevious={() => changeMonth(-1)}//passo il risultato della funzione
         onNext={() => changeMonth(1)}
         onToday={() => changeDate(new Date())}
+        referenceDate={referenceDate}
+        onDateChange={changeDate}
       />
       <CalendarFilters
         departments={visibleDepartments}
@@ -148,7 +150,7 @@ export default function Calendar() {
         onDepartmentChange={changeDepartment}
         onClassroomChange={setClassroomId}
       />
-      {selectedDay && (
+      {selectedDay && (//mostra la lista solo se viene selezionato un giorno
         <CalendarDayDetails
           day={selectedDay}
           bookings={bookings.filter(
