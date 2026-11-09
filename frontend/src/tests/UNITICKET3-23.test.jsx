@@ -126,14 +126,16 @@ describe("UNITICKET3-23 - Booking approval and rejection", () => {
   });
 
   describe("rejectBookingRequest", () => {
-    it("rejects a pending booking request", async () => {
+    it("rejects a pending booking request and save the mreason", async () => {
       mockTransactionGet.mockResolvedValue(createSnapshot("PENDING"));
 
-      await rejectBookingRequest("booking-123");
+      await rejectBookingRequest("booking-123", " Aula gia occupata ");
 
       expect(mockTransactionUpdate).toHaveBeenCalledWith(
         bookingRef,
-        { status: "REJECTED" }
+        { status: "REJECTED",
+          rejectionReason: "Aula gia occupata",
+         }
       );
     });
 
@@ -143,7 +145,7 @@ describe("UNITICKET3-23 - Booking approval and rejection", () => {
       );
 
       await expect(
-        rejectBookingRequest("booking-123")
+        rejectBookingRequest("booking-123", "Aula non disponibile")
       ).rejects.toThrow("Richiesta di prenotazione non trovata.");
 
       expect(mockTransactionUpdate).not.toHaveBeenCalled();
@@ -153,7 +155,7 @@ describe("UNITICKET3-23 - Booking approval and rejection", () => {
       mockTransactionGet.mockResolvedValue(createSnapshot("APPROVED"));
 
       await expect(
-        rejectBookingRequest("booking-123")
+        rejectBookingRequest("booking-123", "Aula gia occupata")
       ).rejects.toThrow(
         "È possibile rifiutare solo richieste in attesa."
       );
@@ -162,7 +164,7 @@ describe("UNITICKET3-23 - Booking approval and rejection", () => {
     });
 
     it("throws an error if the request ID is missing", async () => {
-      await expect(rejectBookingRequest("")).rejects.toThrow(
+      await expect(rejectBookingRequest("", "motivo demo")).rejects.toThrow(
         "ID della richiesta obbligatorio."
       );
 

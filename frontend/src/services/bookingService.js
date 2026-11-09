@@ -234,12 +234,27 @@ export async function approveBookingRequest(requestId) {
   });
 }
 
-export async function rejectBookingRequest(requestId) {
+export async function rejectBookingRequest(requestId, rejectReason) {
   if (!requestId) {
     throw new Error("ID della richiesta obbligatorio.");
   }
+
+  if(typeof rejectReason != 'string'){
+      throw new Error("Per favore inserisci una stringa di testo valida");
+  }
+
+  rejectReason = rejectReason.trim();
+
+  if(!rejectReason){
+    throw new Error("Motivazione del rifiuto richiesta.");
+  }
+
+  //apro il doc delle request dal fire store e prendo quella con l'id passato alla funzione
   const bookingRef = doc(db, "bookingRequest", requestId);
+
+  //avvio una transaction per la modifica dei campi del documento
   await runTransaction(db, async (transaction) => {
+    //la attivo sulla request ottenuta tramite doc
     const bookingSnapshot = await transaction.get(bookingRef);
     if (!bookingSnapshot.exists()) {
       throw new Error("Richiesta di prenotazione non trovata.");
@@ -247,7 +262,11 @@ export async function rejectBookingRequest(requestId) {
     if (bookingSnapshot.data().status !== "PENDING") {
       throw new Error("È possibile rifiutare solo richieste in attesa.");
     }
-    transaction.update(bookingRef, { status: "REJECTED" });
+
+    transaction.update(bookingRef, {
+      rejectionReason: rejectReason,
+      status: "REJECTED",
+    });
   });
 }
 
@@ -291,6 +310,7 @@ export async function getProfessorBookingRequests(professorId) {
         startTime: formatTime(data.startsAt || data.startTime),
         endTime: formatTime(data.endsAt || data.endTime),
         status: data.status || "PENDING",
+        reason: data.rejectionReason,
       };
     })
   );

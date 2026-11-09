@@ -66,6 +66,8 @@ service cloud.firestore {
     }
     function isValidBookingData() {
       let data = request.resource.data;
+      let reason = data.get('rejectionReason', '');
+
       let fields = [
         'classroom',
         'department',
@@ -74,10 +76,11 @@ service cloud.firestore {
         'date',
         'startsAt',
         'endsAt',
-        'status'
+        'status',
+
       ];
       return data.keys().hasAll(fields)
-        && data.keys().hasOnly(fields)
+        && data.keys().hasOnly(fields.concat(['rejectionReason']))
         && isValidReference(data.classroom, 'classrooms')
         && isValidReference(data.department, 'departments')
         && isValidReference(data.professor, 'users')
@@ -90,7 +93,12 @@ service cloud.firestore {
         && data.startsAt is timestamp
         && data.endsAt is timestamp
         && data.startsAt < data.endsAt
-        && data.status in ['PENDING', 'APPROVED', 'REJECTED'];
+        && data.status in ['PENDING', 'APPROVED', 'REJECTED']
+        && reason is string
+        && reason.size() <= 500
+        && (data.status == 'REJECTED'
+          ? reason.trim().size() > 0
+          : reason == '');
     }
     match /users/{userId} {
       allow get: if isAuthenticated()
@@ -122,8 +130,11 @@ service cloud.firestore {
         && isValidBookingData()
         && resource.data.status == 'PENDING'
         && request.resource.data.status in ['APPROVED', 'REJECTED']
-        && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['status']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          request.resource.data.status == 'REJECTED'
+            ? ['status', 'rejectionReason']
+            : ['status']
+        );
     }
     match /{document=**} {
       allow read, write: if false;

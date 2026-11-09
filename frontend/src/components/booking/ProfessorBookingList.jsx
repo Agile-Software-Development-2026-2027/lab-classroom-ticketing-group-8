@@ -119,6 +119,14 @@ export default function ProfessorBookingList() {
                     <span className="ur-detail-label">Stato:</span>
                     <span className="ur-detail-value">{statusLabel}</span>
                   </div>
+
+                  {request.status=="REJECTED" &&(
+                     <div className="ur-detail-row">
+                      <span className="ur-detail-label">Motivazione rifiuto:</span>
+                      <span className="ur-detail-value">{request.reason}</span>
+                    </div>
+                  )}
+                
                 </div>
               </li>
             );
