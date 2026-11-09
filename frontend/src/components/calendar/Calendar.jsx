@@ -132,11 +132,26 @@ export default function Calendar() {
     
   }
 
-  function changeMonth(amount) {
-    const next = new Date(referenceDate);//copiamo l'attuale cosi da non modificare il riferimento
-    next.setDate(1);//la metto al primo giorno per evitare problemi qualsiasi
-    next.setMonth(next.getMonth() + amount);//cambio solo il mese
-    changeDate(next);//reimposto la reference con la date con il mese cambiato
+  function changeMonth(amount) {//si continua a chiamre change month ma gestira il cambio giorno nel tipo di view
+
+    if(typeView=="month"){
+      const next = new Date(referenceDate);//copiamo l'attuale cosi da non modificare il riferimento
+      next.setDate(1);//la metto al primo giorno per evitare problemi qualsiasi
+      next.setMonth(next.getMonth() + amount);//cambio solo il mese
+      changeDate(next);//reimposto la reference con la date con il mese cambiato
+    }
+    
+    if(typeView=="week"){
+      const next = new Date(referenceDate);//copiamo l'attuale cosi da non modificare il riferimento
+      next.setDate(next.getDate() + (amount*7));//cambio solo il mese
+      changeDate(next);//reimposto la reference con la date con il mese cambiato
+    }
+
+    if(typeView=="day"){
+      const next=new Date(referenceDate);
+      next.setDate(next.getDate()+amount);
+      changeDate(next);
+    }
   }
 
   function openDay(day, button) {
@@ -150,10 +165,14 @@ export default function Calendar() {
   }
 
   function changeDepartment(nextDepartmentId) {
+
     if (isRestricted || authLoading) return;
     setGuestDepartmentId(nextDepartmentId);
     setClassroomId("");
-    setSelectedDay(null);
+    if(typeView!="day"){
+      setSelectedDay(null);
+    }
+
   }
 
   function changeView(type){
@@ -165,10 +184,39 @@ export default function Calendar() {
     setTypeView(type);
   }
 
-  const periodLabel = referenceDate.toLocaleDateString("it-IT", {
-    month: "long",
-    year: "numeric",
-  });
+  let periodLabel = "";
+
+  if (typeView === "month") {
+    periodLabel = referenceDate.toLocaleDateString("it-IT", {
+      month: "long",
+      year: "numeric",
+    });
+
+  } else if (typeView === "day") {
+    periodLabel = referenceDate.toLocaleDateString("it-IT", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+  } else if (typeView === "week") {
+    // Recuperiamo gli oggetti del primo e dell'ultimo giorno.
+    const firstDay = days[0];
+    const lastDay = days[days.length - 1];
+
+    const options = {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    };
+
+    // Formattiamo il campo Date contenuto nei due oggetti.
+    const startLabel = firstDay.date.toLocaleDateString("it-IT", options);
+    const endLabel = lastDay.date.toLocaleDateString("it-IT", options);
+
+    periodLabel = `${startLabel} – ${endLabel}`;
+  }
 
   return (
     <section className="classroom-calendar" aria-label="Calendario delle aule">
