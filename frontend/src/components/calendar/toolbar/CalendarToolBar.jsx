@@ -1,5 +1,6 @@
 import CalendarNavigation from "../navigation/CalendarNavigaton";
 
+import TypePicker from "../typePicker/TypePicker"
 import DatePicker from "../datePicker/DatePicker";
 import "./CalendarToolBar.css";
 
@@ -9,7 +10,8 @@ export default function CalendarToolbar({
   onToday,
   onNext,
   onDateChange,
-  referenceDate
+  referenceDate,
+  onTypeChange
 }) {
 
   return (
@@ -28,6 +30,10 @@ export default function CalendarToolbar({
       <DatePicker
           referenceDate={referenceDate}
           onDateChange={onDateChange}
+      />
+
+      <TypePicker
+        onTypeChange={onTypeChange}      
       />
       
     </div>
