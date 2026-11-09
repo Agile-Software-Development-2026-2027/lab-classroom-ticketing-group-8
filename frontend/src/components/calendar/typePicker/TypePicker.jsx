@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import "./TypePicker.css";
 
 export default function TypePicker( {onTypeChange} ) {//passo una funzione
   const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +13,7 @@ export default function TypePicker( {onTypeChange} ) {//passo una funzione
 
   return (
     <div className="dropdown-container">
-      <button onClick={toggleDropdown}>
+      <button type="button" aria-expanded={isOpen} onClick={toggleDropdown}>
         Seleziona la vista
       </button>
 

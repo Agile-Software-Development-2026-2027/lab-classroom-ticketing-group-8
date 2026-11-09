@@ -30,6 +30,7 @@ export default function Calendar() {
   const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [today, setToday] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState(null);
+  const [referenceDateDay, setReferenceDateDay]=useState(null);
   const [guestDepartmentId, setGuestDepartmentId] = useState("");
   const [classroomId, setClassroomId] = useState("");
   const lastDayButton = useRef(null);
@@ -125,6 +126,10 @@ export default function Calendar() {
     setToday(new Date());
     setReferenceDate(date);
     setSelectedDay(null);
+    if(typeView=="day"){
+      setSelectedDay({date, dateKey: dateKey(date)})
+    }
+    
   }
 
   function changeMonth(amount) {
@@ -152,6 +157,11 @@ export default function Calendar() {
   }
 
   function changeView(type){
+    if(type=="day"){
+      const date = new Date(referenceDate);
+      date.setDate(date.getDate());
+      setSelectedDay({date, dateKey: dateKey(date)})
+    }
     setTypeView(type);
   }
 
@@ -180,7 +190,7 @@ export default function Calendar() {
         onDepartmentChange={changeDepartment}
         onClassroomChange={setClassroomId}
       />
-      {selectedDay && (//mostra la lista solo se viene selezionato un giorno
+      {(selectedDay && (typeView!="day")) && (//mostra la lista solo se viene selezionato un giorno
         <CalendarDayDetails
           day={selectedDay}
           bookings={bookings.filter(
@@ -215,12 +225,14 @@ export default function Calendar() {
       )}
 
       {typeView=="day" &&(
-
+        
         <CalendarDayDetails
-          day={referenceDate}
+          type={typeView}
+          day={selectedDay}
           bookings={bookings.filter(
             (booking) => booking.date === selectedDay.dateKey
           )}
+          
           message={bookingsLoading ? "Caricamento prenotazioni..." : message}
         />
 
