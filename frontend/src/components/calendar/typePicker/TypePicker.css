@@ -1,0 +1,117 @@
+.classroom-calendar .dropdown-container {
+  position: relative;
+  flex-shrink: 0;
+  align-self: flex-end;
+  min-width: 190px;
+  color: var(--ur-text);
+}
+
+.classroom-calendar .dropdown-container > button {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--ur-red);
+  border-radius: 6px;
+  background: white;
+  color: var(--ur-red);
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.classroom-calendar .dropdown-container > button::after {
+  content: "";
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.classroom-calendar .dropdown-container > button:hover,
+.classroom-calendar .dropdown-container > button[aria-expanded="true"] {
+  background: #fff1f1;
+  color: var(--ur-red-hover);
+}
+
+.classroom-calendar .dropdown-container > button[aria-expanded="true"]::after {
+  margin-top: 4px;
+  transform: rotate(225deg);
+}
+
+.classroom-calendar .dropdown-container > button:focus-visible {
+  outline: 3px solid var(--ur-red);
+  outline-offset: 3px;
+}
+
+.classroom-calendar .dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 190px;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid #dedee3;
+  border-radius: 8px;
+  background: white;
+  color: var(--ur-text);
+  box-shadow: 0 10px 28px rgb(37 37 40 / 14%);
+  list-style: none;
+}
+
+.classroom-calendar .dropdown-menu > li {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.classroom-calendar .dropdown-menu > li + li {
+  margin-top: 2px;
+}
+
+.classroom-calendar .dropdown-menu > li:hover {
+  background: #fff1f1;
+  color: var(--ur-red-hover);
+}
+
+@media (max-width: 600px) {
+  .classroom-calendar .dropdown-container {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .classroom-calendar .dropdown-menu {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .classroom-calendar .dropdown-container > button,
+  .classroom-calendar .dropdown-container > button::after,
+  .classroom-calendar .dropdown-menu > li {
+    transition: none;
+  }
+}

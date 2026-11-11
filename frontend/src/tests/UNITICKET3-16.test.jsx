@@ -16,7 +16,14 @@ vi.mock("firebase/auth", () => ({
   signInWithEmailAndPassword: vi.fn(),
   signOut: vi.fn(),
 }));
-vi.mock("firebase/firestore", () => ({ doc: vi.fn(), getDoc: vi.fn() }));
+vi.mock("firebase/firestore", () => ({
+  doc: vi.fn(),
+  getDoc: vi.fn(),
+  collection: vi.fn(),
+  getDocs: vi.fn(() => Promise.resolve({ docs: [] })),
+  query: vi.fn(),
+  where: vi.fn(),
+}));
 
 const professor = { uid: "prof-test", email: "100001@uniroom.test" };
 const professorProfile = {

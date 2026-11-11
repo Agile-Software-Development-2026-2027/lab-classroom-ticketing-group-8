@@ -1,13 +1,10 @@
-# CI: runs on every pull request and on every push to main.
-# The job "test" is a required check on main: a pull request cannot be merged until it is green.
-# Do not rename the job.
 name: CI
 
 on:
   pull_request:
   push:
     branches: [main]
-  workflow_dispatch: # lets you run CI by hand from the Actions tab
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -17,116 +14,89 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-
       - name: Run lint
         working-directory: frontend
         run: npm run lint
-
-      - name: Build React application
+      - name: Build application
         working-directory: frontend
         run: npm run build
-
-      - name: Verify build output
+      - name: Verify build
         run: test -f frontend/dist/index.html
 
   auth:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-
-      - name: Run authentication tests
+      - name: Run auth tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-16.test.jsx
 
   home_navigation:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-
-      - name: Run home navigation tests
+      - name: Run navigation tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-27.test.jsx
 
   admin_auth:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-
-      - name: Run administrator authentication tests
+      - name: Run admin auth tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-18.test.jsx
 
   calendar_view:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-
       - name: Run calendar tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-19.test.jsx
@@ -134,53 +104,106 @@ jobs:
   admin_booking_requests:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-
-      - name: Run admin booking requests tests
+      - name: Run admin requests tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-20.test.jsx
 
   submit_booking_request:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-
-      - name: Run submit booking request tests
+      - name: Run booking submission tests
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-21.test.jsx
 
   booking_approval_rejection:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run booking approval tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET3-23.test.jsx
 
+  department_frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Story 29 frontend tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET3-29.test.jsx
+
+  department_firestore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Story 29 Firestore tests
+        env:
+          REQUIRE_FIRESTORE_RULES: "1"
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --only firestore \
+            --project demo-uniticket29 \
+            "cd frontend && npm run test -- src/tests/UNITICKET3-29.rules.test.js"
+  
+  rejection_reason_frontend:
+    name: Story 45 - Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: npm
@@ -190,16 +213,105 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run booking approval and rejection tests
+      - name: Run Story 45 frontend tests
         working-directory: frontend
-        run: npm run test -- src/tests/UNITICKET3-23.test.jsx
+        run: npm run test -- src/tests/UNITICKET-45.test.jsx
+
+  rejection_reason_firestore:
+    name: Story 45 - Firestore Rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Story 45 Firestore Rules tests
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --only firestore \
+            --project demo-uniticket45 \
+            "npm --prefix frontend run test -- src/tests/UNITICKET3-45.rules.test.js"
+  
+
+  operating_hours_frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Task 34 frontend tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET3-34.test.js
+
+  operating_hours_firestore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Task 34 Firestore tests
+        env:
+          REQUIRE_FIRESTORE_RULES: "1"
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --only firestore \
+            --project demo-uniticket34 \
+            "cd frontend && npm run test -- src/tests/UNITICKET3-34.rules.test.js"
 
   test:
-    needs: [build, auth, home_navigation, admin_auth, calendar_view, admin_booking_requests, submit_booking_request, booking_approval_rejection]
+    needs:
+      - build
+      - auth
+      - home_navigation
+      - admin_auth
+      - calendar_view
+      - admin_booking_requests
+      - submit_booking_request
+      - booking_approval_rejection
+      - department_frontend
+      - department_firestore
+      - rejection_reason_frontend
+      - rejection_reason_firestore
+      - operating_hours_frontend
+      - operating_hours_firestore
+
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - name: Verify all jobs passed
         run: |
@@ -207,7 +319,13 @@ jobs:
           test "${{ needs.auth.result }}" = "success"
           test "${{ needs.home_navigation.result }}" = "success"
           test "${{ needs.admin_auth.result }}" = "success"
-          test "${{ needs.admin_booking_requests.result }}" = "success"
           test "${{ needs.calendar_view.result }}" = "success"
+          test "${{ needs.admin_booking_requests.result }}" = "success"
           test "${{ needs.submit_booking_request.result }}" = "success"
           test "${{ needs.booking_approval_rejection.result }}" = "success"
+          test "${{ needs.department_frontend.result }}" = "success"
+          test "${{ needs.department_firestore.result }}" = "success"
+          test "${{ needs.rejection_reason_frontend.result }}" = "success"
+          test "${{ needs.rejection_reason_firestore.result }}" = "success"
+          test "${{ needs.operating_hours_frontend.result }}" = "success"
+          test "${{ needs.operating_hours_firestore.result }}" = "success"

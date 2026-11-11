@@ -1,4 +1,7 @@
+
 import { useEffect, useState } from "react";
+import { useAuth } from "../contexts/useAuth";
+import { getAssignedDepartmentId } from "../services/userService";
 import {
   getPendingBookingRequests,
   approveBookingRequest,
@@ -7,9 +10,14 @@ import {
 import "./BookingRequests.css";
 
 export default function BookingRequests() {
+  const { profile } = useAuth();
+  const departmentId = getAssignedDepartmentId(profile);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingRequestId, setProcessingRequestId] = useState(null);
+  const [requestToRejectId, setRequestToRejectId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionError, setRejectionError] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -20,14 +28,22 @@ export default function BookingRequests() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getPendingBookingRequests();
+        setRequests([]);
+
+        if (profile?.role !== "ADMIN" || !departmentId) {
+          throw new Error("Dipartimento amministratore non assegnato.");
+        }
+
+        const data = await getPendingBookingRequests(departmentId);
+
         if (isMounted) {
           setRequests(data);
         }
       } catch (err) {
         if (isMounted) {
-          setError("Impossibile caricare le richieste. Riprova più tardi.");
-          console.error("Errore nel caricamento delle richieste:", err);
+          setError(
+            err.message || "Impossibile caricare le richieste."
+          );
         }
       } finally {
         if (isMounted) {
@@ -41,29 +57,41 @@ export default function BookingRequests() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [departmentId, profile?.role]);
 
-  async function handleBookingAction(requestId, action) {
+  async function handleBookingAction(requestId, action, reason ) {
     try {
       setProcessingRequestId(requestId);
       setError(null);
+      setRejectionError(null);
+      setSuccess(null);
 
       if (action === "approve") {
         await approveBookingRequest(requestId);
       } else {
-        await rejectBookingRequest(requestId);
+        await rejectBookingRequest(requestId, reason)
+        setRequestToRejectId(null);
       }
 
       setRequests((currentRequests) =>
         currentRequests.filter((request) => request.id !== requestId)
       );
-    } catch (err) {
-      console.error("Errore nella gestione della richiesta:", err);
 
-      setError(
-        err.message || "Impossibile modificare la richiesta. Riprova."
+      setSuccess(
+        action === "approve"
+          ? "Richiesta approvata con successo."
+          : "Richiesta rifiutata con successo."
       );
-    } finally {
+    } catch (err) {
+      const message =
+        err.message || "Impossibile modificare la richiesta. Riprova.";
+
+      if (action === "reject") {
+        setRejectionError(message);
+      } else {
+        setError(message);
+      }
+    }finally {
       setProcessingRequestId(null);
     }
   }
@@ -73,7 +101,8 @@ export default function BookingRequests() {
       <header className="ur-booking-header">
         <h1>Richieste di Prenotazione</h1>
         <p className="ur-booking-subtitle">
-          Elenco delle richieste di prenotazione aule in attesa di revisione.
+          Elenco delle richieste di prenotazione aule in attesa di revisione
+          per il tuo dipartimento.
         </p>
       </header>
 
@@ -122,19 +151,16 @@ export default function BookingRequests() {
                     {request.professorName}
                   </span>
                 </div>
-
                 <div className="ur-detail-row">
                   <span className="ur-detail-label">Matricola:</span>
                   <span className="ur-detail-value">
                     {request.professorUniversityId}
                   </span>
                 </div>
-
                 <div className="ur-detail-row">
                   <span className="ur-detail-label">Data:</span>
                   <span className="ur-detail-value">{request.date}</span>
                 </div>
-
                 <div className="ur-detail-row">
                   <span className="ur-detail-label">Orario:</span>
                   <span className="ur-detail-value">
@@ -154,18 +180,56 @@ export default function BookingRequests() {
                     ? "Elaborazione..."
                     : "Approva"}
                 </button>
-
                 <button
                   type="button"
                   className="ur-button ur-button-reject"
-                  disabled={processingRequestId !== null}
-                  onClick={() => handleBookingAction(request.id, "reject")}
+                  disabled={processingRequestId !== null || requestToRejectId === request.id}
+                  onClick={() =>{
+                    setRequestToRejectId(request.id);
+                    setRejectionReason("");
+                    setRejectionError(null);
+                  }}
                 >
                   {processingRequestId === request.id
                     ? "Elaborazione..."
                     : "Rifiuta"}
                 </button>
               </div>
+
+              {requestToRejectId === request.id && (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleBookingAction(request.id, "reject", rejectionReason);
+                  }}
+                >
+                  <fieldset disabled={processingRequestId !== null}>
+                    <label>
+                      Motivazione del rifiuto
+                      <textarea
+                        value={rejectionReason}
+                        onChange={(event) => setRejectionReason(event.target.value)}
+                        required
+                      />
+                    </label>
+
+                    {rejectionError && < p className="ur-message ur-message-error" role="alert">{rejectionError}</p>}
+
+                    <div className="ur-request-actions">
+                      <button
+                        type="button"
+                        className="ur-button ur-button-cancel"
+                        onClick={() => setRequestToRejectId(null)}
+                      >
+                        Annulla
+                      </button>
+                      <button type="submit" className="ur-button ur-button-reject">
+                        Conferma rifiuto
+                      </button>
+                    </div>
+                  </fieldset>
+                </form>
+              )}
             </li>
           ))}
         </ul>

@@ -126,6 +126,7 @@ describe("UNITICKET3-23 - Booking approval and rejection", () => {
   });
 
   describe("rejectBookingRequest", () => {
+<<<<<<< HEAD
     it("rejects a pending booking request", async () => {
       mockTransactionGet.mockResolvedValue(createSnapshot("PENDING"));
 
@@ -134,6 +135,18 @@ describe("UNITICKET3-23 - Booking approval and rejection", () => {
       expect(mockTransactionUpdate).toHaveBeenCalledWith(
         bookingRef,
         { status: "REJECTED" }
+=======
+    it("rejects a pending booking request and save the mreason", async () => {
+      mockTransactionGet.mockResolvedValue(createSnapshot("PENDING"));
+
+      await rejectBookingRequest("booking-123", " Aula gia occupata ");
+
+      expect(mockTransactionUpdate).toHaveBeenCalledWith(
+        bookingRef,
+        { status: "REJECTED",
+          rejectionReason: "Aula gia occupata",
+         }
+>>>>>>> origin/main
       );
     });
 
@@ -143,7 +156,11 @@ describe("UNITICKET3-23 - Booking approval and rejection", () => {
       );
 
       await expect(
+<<<<<<< HEAD
         rejectBookingRequest("booking-123")
+=======
+        rejectBookingRequest("booking-123", "Aula non disponibile")
+>>>>>>> origin/main
       ).rejects.toThrow("Richiesta di prenotazione non trovata.");
 
       expect(mockTransactionUpdate).not.toHaveBeenCalled();
@@ -153,7 +170,11 @@ describe("UNITICKET3-23 - Booking approval and rejection", () => {
       mockTransactionGet.mockResolvedValue(createSnapshot("APPROVED"));
 
       await expect(
+<<<<<<< HEAD
         rejectBookingRequest("booking-123")
+=======
+        rejectBookingRequest("booking-123", "Aula gia occupata")
+>>>>>>> origin/main
       ).rejects.toThrow(
         "È possibile rifiutare solo richieste in attesa."
       );
@@ -162,7 +183,11 @@ describe("UNITICKET3-23 - Booking approval and rejection", () => {
     });
 
     it("throws an error if the request ID is missing", async () => {
+<<<<<<< HEAD
       await expect(rejectBookingRequest("")).rejects.toThrow(
+=======
+      await expect(rejectBookingRequest("", "motivo demo")).rejects.toThrow(
+>>>>>>> origin/main
         "ID della richiesta obbligatorio."
       );
 
