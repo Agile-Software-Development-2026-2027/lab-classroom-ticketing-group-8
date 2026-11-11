@@ -9,6 +9,7 @@ import {
   query,
   where,
   runTransaction,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/client";
 
@@ -322,7 +323,7 @@ export async function approveBookingRequest(requestId) {
         classroomSnapshot.exists()
       ) {
         transaction.update(classroomRef, {
-          lastBookingApproval: Timestamp.now ? Timestamp.now() : new Date(),
+          lastBookingApproval: serverTimestamp(),
         });
       }
     }
