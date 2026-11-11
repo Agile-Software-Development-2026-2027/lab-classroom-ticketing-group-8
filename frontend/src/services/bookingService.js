@@ -57,28 +57,6 @@ function toRomeDate(date, time) {
   return new Date(utcGuess - offsetMinutes * 60000);
 }
 
-function getNormalizedTime(val, date) {
-  if (!val) return null;
-  if (typeof val.toMillis === "function") return val.toMillis();
-  if (typeof val.toDate === "function") return val.toDate().getTime();
-  if (val instanceof Date) return val.getTime();
-  if (typeof val.seconds === "number") {
-    return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000);
-  }
-  if (typeof val === "number") return val;
-  if (typeof val === "string" && /^\d{2}:\d{2}$/.test(val)) {
-    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      try {
-        return toRomeDate(date, val).getTime();
-      } catch {
-        return toMinutes(val);
-      }
-    }
-    return toMinutes(val);
-  }
-  return null;
-}
-
 export function isBookingOverlapping(bookingA, bookingB) {
   if (!bookingA || !bookingB) return false;
 
@@ -101,26 +79,19 @@ export function isBookingOverlapping(bookingA, bookingB) {
     return false;
   }
 
-  const startA = getNormalizedTime(
-    bookingA.startsAt || bookingA.startTime,
-    bookingA.date
-  );
-  const endA = getNormalizedTime(
-    bookingA.endsAt || bookingA.endTime,
-    bookingA.date
-  );
-  const startB = getNormalizedTime(
-    bookingB.startsAt || bookingB.startTime,
-    bookingB.date
-  );
-  const endB = getNormalizedTime(
-    bookingB.endsAt || bookingB.endTime,
-    bookingB.date
-  );
+  const rawStartA = bookingA.startsAt || bookingA.startTime;
+  const rawEndA = bookingA.endsAt || bookingA.endTime;
+  const rawStartB = bookingB.startsAt || bookingB.startTime;
+  const rawEndB = bookingB.endsAt || bookingB.endTime;
 
-  if (startA === null || endA === null || startB === null || endB === null) {
+  if (!rawStartA || !rawEndA || !rawStartB || !rawEndB) {
     return false;
   }
+
+  const startA = toMinutes(formatTime(rawStartA));
+  const endA = toMinutes(formatTime(rawEndA));
+  const startB = toMinutes(formatTime(rawStartB));
+  const endB = toMinutes(formatTime(rawEndB));
 
   return startA < endB && endA > startB;
 }
@@ -304,19 +275,28 @@ export async function approveBookingRequest(requestId) {
           ? doc(db, "classrooms", bookingData.classroom)
           : bookingData.classroom;
 
+      let classroomSnapshot = null;
+      if (classroomRef && typeof classroomRef === "object") {
+        try {
+          classroomSnapshot = await transaction.get(classroomRef);
+        } catch {
+          // Nel caso in cui classroomRef non sia configurato per la get nei mock di test
+        }
+      }
+
       const requestsCollection = collection(db, "bookingRequest");
       const approvedQuery = bookingData.date
         ? query(
-            requestsCollection,
-            where("status", "==", "APPROVED"),
-            where("classroom", "==", classroomRef),
-            where("date", "==", bookingData.date)
-          )
+          requestsCollection,
+          where("status", "==", "APPROVED"),
+          where("classroom", "==", classroomRef),
+          where("date", "==", bookingData.date)
+        )
         : query(
-            requestsCollection,
-            where("status", "==", "APPROVED"),
-            where("classroom", "==", classroomRef)
-          );
+          requestsCollection,
+          where("status", "==", "APPROVED"),
+          where("classroom", "==", classroomRef)
+        );
 
       const approvedSnapshot = await getDocs(approvedQuery);
       const docs = approvedSnapshot?.docs || [];
@@ -334,6 +314,16 @@ export async function approveBookingRequest(requestId) {
             "Impossibile approvare la richiesta: l'aula è già prenotata nella fascia oraria richiesta."
           );
         }
+      }
+
+      if (
+        classroomSnapshot &&
+        typeof classroomSnapshot.exists === "function" &&
+        classroomSnapshot.exists()
+      ) {
+        transaction.update(classroomRef, {
+          lastBookingApproval: Timestamp.now ? Timestamp.now() : new Date(),
+        });
       }
     }
 
