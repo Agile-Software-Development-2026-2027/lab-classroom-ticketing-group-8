@@ -57,6 +57,74 @@ function toRomeDate(date, time) {
   return new Date(utcGuess - offsetMinutes * 60000);
 }
 
+function getNormalizedTime(val, date) {
+  if (!val) return null;
+  if (typeof val.toMillis === "function") return val.toMillis();
+  if (typeof val.toDate === "function") return val.toDate().getTime();
+  if (val instanceof Date) return val.getTime();
+  if (typeof val.seconds === "number") {
+    return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000);
+  }
+  if (typeof val === "number") return val;
+  if (typeof val === "string" && /^\d{2}:\d{2}$/.test(val)) {
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      try {
+        return toRomeDate(date, val).getTime();
+      } catch {
+        return toMinutes(val);
+      }
+    }
+    return toMinutes(val);
+  }
+  return null;
+}
+
+export function isBookingOverlapping(bookingA, bookingB) {
+  if (!bookingA || !bookingB) return false;
+
+  if (bookingA.id && bookingB.id && bookingA.id === bookingB.id) {
+    return false;
+  }
+
+  const classroomA =
+    bookingA.classroom?.id ||
+    (typeof bookingA.classroom === "string" ? bookingA.classroom : null);
+  const classroomB =
+    bookingB.classroom?.id ||
+    (typeof bookingB.classroom === "string" ? bookingB.classroom : null);
+
+  if (classroomA && classroomB && classroomA !== classroomB) {
+    return false;
+  }
+
+  if (bookingA.date && bookingB.date && bookingA.date !== bookingB.date) {
+    return false;
+  }
+
+  const startA = getNormalizedTime(
+    bookingA.startsAt || bookingA.startTime,
+    bookingA.date
+  );
+  const endA = getNormalizedTime(
+    bookingA.endsAt || bookingA.endTime,
+    bookingA.date
+  );
+  const startB = getNormalizedTime(
+    bookingB.startsAt || bookingB.startTime,
+    bookingB.date
+  );
+  const endB = getNormalizedTime(
+    bookingB.endsAt || bookingB.endTime,
+    bookingB.date
+  );
+
+  if (startA === null || endA === null || startB === null || endB === null) {
+    return false;
+  }
+
+  return startA < endB && endA > startB;
+}
+
 export function validateBookingData(data) {
   if (!data) {
     throw new Error("I dati della richiesta sono obbligatori.");
@@ -225,9 +293,50 @@ export async function approveBookingRequest(requestId) {
     if (!bookingSnapshot.exists()) {
       throw new Error("Richiesta di prenotazione non trovata.");
     }
-    if (bookingSnapshot.data().status !== "PENDING") {
+    const bookingData = bookingSnapshot.data();
+    if (bookingData.status !== "PENDING") {
       throw new Error("È possibile approvare solo richieste in attesa.");
     }
+
+    if (bookingData.classroom && (bookingData.startsAt || bookingData.startTime)) {
+      const classroomRef =
+        typeof bookingData.classroom === "string"
+          ? doc(db, "classrooms", bookingData.classroom)
+          : bookingData.classroom;
+
+      const requestsCollection = collection(db, "bookingRequest");
+      const approvedQuery = bookingData.date
+        ? query(
+            requestsCollection,
+            where("status", "==", "APPROVED"),
+            where("classroom", "==", classroomRef),
+            where("date", "==", bookingData.date)
+          )
+        : query(
+            requestsCollection,
+            where("status", "==", "APPROVED"),
+            where("classroom", "==", classroomRef)
+          );
+
+      const approvedSnapshot = await getDocs(approvedQuery);
+      const docs = approvedSnapshot?.docs || [];
+
+      for (const docSnapshot of docs) {
+        if (docSnapshot.id === requestId) continue;
+        const approvedData = docSnapshot.data();
+        if (
+          isBookingOverlapping(
+            { id: requestId, ...bookingData },
+            { id: docSnapshot.id, ...approvedData }
+          )
+        ) {
+          throw new Error(
+            "Impossibile approvare la richiesta: l'aula è già prenotata nella fascia oraria richiesta."
+          );
+        }
+      }
+    }
+
     transaction.update(bookingRef, {
       status: "APPROVED",
     });
