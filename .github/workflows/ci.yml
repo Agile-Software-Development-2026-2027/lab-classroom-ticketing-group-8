@@ -292,6 +292,51 @@ jobs:
             --project demo-uniticket34 \
             "cd frontend && npm run test -- src/tests/UNITICKET3-34.rules.test.js"
 
+  concurrency_booking_frontend:
+    name: Story 30 - Concurrency Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Story 30 frontend tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET3-30.test.jsx
+
+  concurrency_booking_firestore:
+    name: Story 30 - Concurrency Firestore Rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Story 30 Firestore tests
+        env:
+          REQUIRE_FIRESTORE_RULES: "1"
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --only firestore \
+            --project demo-uniticket30 \
+            "cd frontend && npm run test -- src/tests/UNITICKET3-30.rules.test.js"
+
   test:
     needs:
       - build
@@ -308,6 +353,8 @@ jobs:
       - rejection_reason_firestore
       - operating_hours_frontend
       - operating_hours_firestore
+      - concurrency_booking_frontend
+      - concurrency_booking_firestore
 
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -329,3 +376,5 @@ jobs:
           test "${{ needs.rejection_reason_firestore.result }}" = "success"
           test "${{ needs.operating_hours_frontend.result }}" = "success"
           test "${{ needs.operating_hours_firestore.result }}" = "success"
+          test "${{ needs.concurrency_booking_frontend.result }}" = "success"
+          test "${{ needs.concurrency_booking_firestore.result }}" = "success"

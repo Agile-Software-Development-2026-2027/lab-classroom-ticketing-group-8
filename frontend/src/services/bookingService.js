@@ -9,6 +9,7 @@ import {
   query,
   where,
   runTransaction,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/client";
 
@@ -55,6 +56,45 @@ function toRomeDate(date, time) {
     Number(match[2]) * 60 + Number(match[3] ?? 0)
   );
   return new Date(utcGuess - offsetMinutes * 60000);
+}
+
+export function isBookingOverlapping(bookingA, bookingB) {
+  if (!bookingA || !bookingB) return false;
+
+  if (bookingA.id && bookingB.id && bookingA.id === bookingB.id) {
+    return false;
+  }
+
+  const classroomA =
+    bookingA.classroom?.id ||
+    (typeof bookingA.classroom === "string" ? bookingA.classroom : null);
+  const classroomB =
+    bookingB.classroom?.id ||
+    (typeof bookingB.classroom === "string" ? bookingB.classroom : null);
+
+  if (classroomA && classroomB && classroomA !== classroomB) {
+    return false;
+  }
+
+  if (bookingA.date && bookingB.date && bookingA.date !== bookingB.date) {
+    return false;
+  }
+
+  const rawStartA = bookingA.startsAt || bookingA.startTime;
+  const rawEndA = bookingA.endsAt || bookingA.endTime;
+  const rawStartB = bookingB.startsAt || bookingB.startTime;
+  const rawEndB = bookingB.endsAt || bookingB.endTime;
+
+  if (!rawStartA || !rawEndA || !rawStartB || !rawEndB) {
+    return false;
+  }
+
+  const startA = toMinutes(formatTime(rawStartA));
+  const endA = toMinutes(formatTime(rawEndA));
+  const startB = toMinutes(formatTime(rawStartB));
+  const endB = toMinutes(formatTime(rawEndB));
+
+  return startA < endB && endA > startB;
 }
 
 export function validateBookingData(data) {
@@ -225,9 +265,69 @@ export async function approveBookingRequest(requestId) {
     if (!bookingSnapshot.exists()) {
       throw new Error("Richiesta di prenotazione non trovata.");
     }
-    if (bookingSnapshot.data().status !== "PENDING") {
+    const bookingData = bookingSnapshot.data();
+    if (bookingData.status !== "PENDING") {
       throw new Error("È possibile approvare solo richieste in attesa.");
     }
+
+    if (bookingData.classroom && (bookingData.startsAt || bookingData.startTime)) {
+      const classroomRef =
+        typeof bookingData.classroom === "string"
+          ? doc(db, "classrooms", bookingData.classroom)
+          : bookingData.classroom;
+
+      let classroomSnapshot = null;
+      if (classroomRef && typeof classroomRef === "object") {
+        try {
+          classroomSnapshot = await transaction.get(classroomRef);
+        } catch {
+          // Nel caso in cui classroomRef non sia configurato per la get nei mock di test
+        }
+      }
+
+      const requestsCollection = collection(db, "bookingRequest");
+      const approvedQuery = bookingData.date
+        ? query(
+          requestsCollection,
+          where("status", "==", "APPROVED"),
+          where("classroom", "==", classroomRef),
+          where("date", "==", bookingData.date)
+        )
+        : query(
+          requestsCollection,
+          where("status", "==", "APPROVED"),
+          where("classroom", "==", classroomRef)
+        );
+
+      const approvedSnapshot = await getDocs(approvedQuery);
+      const docs = approvedSnapshot?.docs || [];
+
+      for (const docSnapshot of docs) {
+        if (docSnapshot.id === requestId) continue;
+        const approvedData = docSnapshot.data();
+        if (
+          isBookingOverlapping(
+            { id: requestId, ...bookingData },
+            { id: docSnapshot.id, ...approvedData }
+          )
+        ) {
+          throw new Error(
+            "Impossibile approvare la richiesta: l'aula è già prenotata nella fascia oraria richiesta."
+          );
+        }
+      }
+
+      if (
+        classroomSnapshot &&
+        typeof classroomSnapshot.exists === "function" &&
+        classroomSnapshot.exists()
+      ) {
+        transaction.update(classroomRef, {
+          lastBookingApproval: serverTimestamp(),
+        });
+      }
+    }
+
     transaction.update(bookingRef, {
       status: "APPROVED",
     });

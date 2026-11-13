@@ -109,6 +109,10 @@ service cloud.firestore {
     }
     match /classrooms/{classroomId} {
       allow read: if true;
+      allow update: if isAdmin()
+        && isAssignedDepartment(resource.data.department)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastBookingApproval'])
+        && request.resource.data.lastBookingApproval is timestamp;
     }
     match /bookingRequest/{bookingId} {
       allow read: if resource.data.status == 'APPROVED'

@@ -6,6 +6,7 @@ import {
   getPendingBookingRequests,
   approveBookingRequest,
   rejectBookingRequest,
+  isBookingOverlapping,
 } from "../services/bookingService";
 import "./BookingRequests.css";
 
@@ -96,6 +97,16 @@ export default function BookingRequests() {
     }
   }
 
+  const conflictingRequestIds = new Set();
+  for (let i = 0; i < requests.length; i++) {
+    for (let j = i + 1; j < requests.length; j++) {
+      if (isBookingOverlapping(requests[i], requests[j])) {
+        conflictingRequestIds.add(requests[i].id);
+        conflictingRequestIds.add(requests[j].id);
+      }
+    }
+  }
+
   return (
     <div className="ur-booking-container">
       <header className="ur-booking-header">
@@ -139,10 +150,23 @@ export default function BookingRequests() {
                 <span className="ur-request-classroom">
                   {request.classroom}
                 </span>
-                <span className="ur-badge ur-badge-pending">
-                  In attesa
-                </span>
+                <div className="ur-badge-group">
+                  {conflictingRequestIds.has(request.id) && (
+                    <span className="ur-badge ur-badge-conflict">
+                      Conflitto orario
+                    </span>
+                  )}
+                  <span className="ur-badge ur-badge-pending">
+                    In attesa
+                  </span>
+                </div>
               </div>
+
+              {conflictingRequestIds.has(request.id) && (
+                <div className="ur-conflict-notice" role="note">
+                  Attenzione: questa richiesta si sovrappone a un'altra richiesta in attesa per la stessa aula.
+                </div>
+              )}
 
               <div className="ur-request-details">
                 <div className="ur-detail-row">
