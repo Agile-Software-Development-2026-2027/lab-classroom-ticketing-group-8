@@ -120,10 +120,18 @@ export default function ProfessorBookingList() {
                     <span className="ur-detail-value">{statusLabel}</span>
                   </div>
 
-                  {request.status=="REJECTED" &&(
-                     <div className="ur-detail-row">
-                      <span className="ur-detail-label">Motivazione rifiuto:</span>
-                      <span className="ur-detail-value">{request.reason}</span>
+                  {statusKey === "REJECTED" && (
+                    <div className="ur-detail-row ur-rejection-detail">
+                      <span className="ur-detail-label">
+                        Motivazione rifiuto:
+                      </span>
+
+                      <span
+                        className="ur-detail-value ur-rejection-text"
+                        tabIndex={0}
+                      >
+                        {request.reason}
+                      </span>
                     </div>
                   )}
                 

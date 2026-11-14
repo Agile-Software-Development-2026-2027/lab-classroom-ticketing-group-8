@@ -406,32 +406,37 @@ export async function rejectBookingRequest(requestId, rejectReason) {
     throw new Error("ID della richiesta obbligatorio.");
   }
 
-  if (typeof rejectReason != 'string') {
-    throw new Error("Per favore inserisci una stringa di testo valida");
+  if (typeof rejectReason !== "string") {
+    throw new Error("Per favore inserisci una stringa di testo valida.");
   }
 
-  rejectReason = rejectReason.trim();
+  const reason = rejectReason.trim();
 
-  if (!rejectReason) {
+  if (!reason) {
     throw new Error("Motivazione del rifiuto richiesta.");
   }
 
-  //apro il doc delle request dal fire store e prendo quella con l'id passato alla funzione
+  if (reason.length > 500) {
+    throw new Error(
+      "La motivazione del rifiuto non può superare 500 caratteri."
+    );
+  }
+
   const bookingRef = doc(db, "bookingRequest", requestId);
 
-  //avvio una transaction per la modifica dei campi del documento
   await runTransaction(db, async (transaction) => {
-    //la attivo sulla request ottenuta tramite doc
     const bookingSnapshot = await transaction.get(bookingRef);
+
     if (!bookingSnapshot.exists()) {
       throw new Error("Richiesta di prenotazione non trovata.");
     }
+
     if (bookingSnapshot.data().status !== "PENDING") {
       throw new Error("È possibile rifiutare solo richieste in attesa.");
     }
 
     transaction.update(bookingRef, {
-      rejectionReason: rejectReason,
+      rejectionReason: reason,
       status: "REJECTED",
     });
   });
