@@ -45,3 +45,30 @@
   border: 1px solid #fecaca;
 }
 
+.ur-professor-bookings-section .ur-request-card,
+.ur-professor-bookings-section .ur-detail-row {
+  min-width: 0;
+}
+
+/* La motivazione occupa tutta la larghezza della griglia. */
+.ur-professor-bookings-section .ur-rejection-detail {
+  grid-column: 1 / -1;
+}
+
+/* Il testo va a capo anche quando non contiene spazi. */
+.ur-professor-bookings-section .ur-rejection-text {
+  display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 120px;
+  padding-right: 8px;
+
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+}
+
+.ur-professor-bookings-section .ur-rejection-text:focus-visible {
+  outline: 2px solid #b71e24;
+  outline-offset: 3px;
+}

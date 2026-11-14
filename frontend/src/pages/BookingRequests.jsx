@@ -222,6 +222,7 @@ export default function BookingRequests() {
 
               {requestToRejectId === request.id && (
                 <form
+                  className="ur-rejection-form"
                   onSubmit={(event) => {
                     event.preventDefault();
                     handleBookingAction(request.id, "reject", rejectionReason);
@@ -232,12 +233,28 @@ export default function BookingRequests() {
                       Motivazione del rifiuto
                       <textarea
                         value={rejectionReason}
-                        onChange={(event) => setRejectionReason(event.target.value)}
+                        onChange={(event) => {
+                          setRejectionReason(event.target.value);
+                          setRejectionError(null);
+                        }}
+                        maxLength={500}
+                        aria-describedby={`rejection-counter-${request.id}`}
                         required
                       />
                     </label>
 
-                    {rejectionError && < p className="ur-message ur-message-error" role="alert">{rejectionError}</p>}
+                    <p
+                      id={`rejection-counter-${request.id}`}
+                      className="ur-rejection-counter"
+                    >
+                      {rejectionReason.length}/500 caratteri
+                    </p>
+
+                    {rejectionError && (
+                      <p className="ur-message ur-message-error" role="alert">
+                        {rejectionError}
+                      </p>
+                    )}
 
                     <div className="ur-request-actions">
                       <button
@@ -247,6 +264,7 @@ export default function BookingRequests() {
                       >
                         Annulla
                       </button>
+
                       <button type="submit" className="ur-button ur-button-reject">
                         Conferma rifiuto
                       </button>
