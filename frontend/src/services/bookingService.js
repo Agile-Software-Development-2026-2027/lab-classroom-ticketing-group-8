@@ -97,6 +97,60 @@ export function isBookingOverlapping(bookingA, bookingB) {
   return startA < endB && endA > startB;
 }
 
+function formatSlot(booking) {
+  const start = formatTime(booking?.startsAt || booking?.startTime);
+  const end = formatTime(booking?.endsAt || booking?.endTime);
+  return start && end ? `${start}-${end}` : "";
+}
+
+function getStartMinutes(booking) {
+  const rawStart = booking?.startsAt || booking?.startTime;
+  const formatted = formatTime(rawStart);
+  return /^\d{1,2}:\d{2}$/.test(formatted)
+    ? toMinutes(formatted)
+    : Number.MAX_SAFE_INTEGER;
+}
+
+async function findOverlappingApprovedBookings({
+  classroomRef,
+  date,
+  candidateBooking,
+  excludeId = null,
+}) {
+  const requestsCollection = collection(db, "bookingRequest");
+  const approvedQuery = date
+    ? query(
+      requestsCollection,
+      where("status", "==", "APPROVED"),
+      where("classroom", "==", classroomRef),
+      where("date", "==", date)
+    )
+    : query(
+      requestsCollection,
+      where("status", "==", "APPROVED"),
+      where("classroom", "==", classroomRef)
+    );
+
+  const approvedSnapshot = await getDocs(approvedQuery);
+  const docs = approvedSnapshot?.docs || [];
+
+  const conflicts = [];
+  for (const docSnapshot of docs) {
+    if (excludeId && docSnapshot.id === excludeId) continue;
+    const approvedData = docSnapshot.data();
+    if (
+      isBookingOverlapping(candidateBooking, {
+        id: docSnapshot.id,
+        ...approvedData,
+      })
+    ) {
+      conflicts.push({ id: docSnapshot.id, ...approvedData });
+    }
+  }
+
+  return conflicts.sort((a, b) => getStartMinutes(a) - getStartMinutes(b));
+}
+
 export function validateBookingData(data) {
   if (!data) {
     throw new Error("I dati della richiesta sono obbligatori.");
@@ -191,10 +245,42 @@ export async function createBookingRequest(bookingData) {
     departmentId || (typeof department === "string" ? department : department?.id);
   const resolvedProfessorId =
     professorId || (typeof professor === "string" ? professor : professor?.id);
+
+  const classroomRef = doc(db, "classrooms", resolvedClassroomId);
+
+  const conflicts = await findOverlappingApprovedBookings({
+    classroomRef,
+    date,
+    candidateBooking: {
+      classroom: resolvedClassroomId,
+      date,
+      startTime,
+      endTime,
+    },
+  });
+
+  if (conflicts.length > 0) {
+    const occupiedSlots = [
+      ...new Set(conflicts.map(formatSlot).filter(Boolean)),
+    ];
+    if (occupiedSlots.length > 0) {
+      const slotLabel =
+        occupiedSlots.length === 1
+          ? `nella fascia oraria ${occupiedSlots[0]}`
+          : `nelle fasce orarie ${occupiedSlots.join(", ")}`;
+      throw new Error(
+        `Richiesta rifiutata: l'aula è già prenotata il ${date} ${slotLabel}.`
+      );
+    }
+    throw new Error(
+      `Richiesta rifiutata: l'aula è già prenotata il ${date} nella fascia oraria richiesta.`
+    );
+  }
+
   const startsAt = Timestamp.fromDate(toRomeDate(date, startTime));
   const endsAt = Timestamp.fromDate(toRomeDate(date, endTime));
   const newBooking = {
-    classroom: doc(db, "classrooms", resolvedClassroomId),
+    classroom: classroomRef,
     date,
     department: doc(db, "departments", resolvedDepartmentId),
     endsAt,
@@ -285,36 +371,17 @@ export async function approveBookingRequest(requestId) {
         }
       }
 
-      const requestsCollection = collection(db, "bookingRequest");
-      const approvedQuery = bookingData.date
-        ? query(
-          requestsCollection,
-          where("status", "==", "APPROVED"),
-          where("classroom", "==", classroomRef),
-          where("date", "==", bookingData.date)
-        )
-        : query(
-          requestsCollection,
-          where("status", "==", "APPROVED"),
-          where("classroom", "==", classroomRef)
+      const conflicts = await findOverlappingApprovedBookings({
+        classroomRef,
+        date: bookingData.date,
+        candidateBooking: { id: requestId, ...bookingData },
+        excludeId: requestId,
+      });
+
+      if (conflicts.length > 0) {
+        throw new Error(
+          "Impossibile approvare la richiesta: l'aula è già prenotata nella fascia oraria richiesta."
         );
-
-      const approvedSnapshot = await getDocs(approvedQuery);
-      const docs = approvedSnapshot?.docs || [];
-
-      for (const docSnapshot of docs) {
-        if (docSnapshot.id === requestId) continue;
-        const approvedData = docSnapshot.data();
-        if (
-          isBookingOverlapping(
-            { id: requestId, ...bookingData },
-            { id: docSnapshot.id, ...approvedData }
-          )
-        ) {
-          throw new Error(
-            "Impossibile approvare la richiesta: l'aula è già prenotata nella fascia oraria richiesta."
-          );
-        }
       }
 
       if (
@@ -339,13 +406,13 @@ export async function rejectBookingRequest(requestId, rejectReason) {
     throw new Error("ID della richiesta obbligatorio.");
   }
 
-  if(typeof rejectReason != 'string'){
-      throw new Error("Per favore inserisci una stringa di testo valida");
+  if (typeof rejectReason != 'string') {
+    throw new Error("Per favore inserisci una stringa di testo valida");
   }
 
   rejectReason = rejectReason.trim();
 
-  if(!rejectReason){
+  if (!rejectReason) {
     throw new Error("Motivazione del rifiuto richiesta.");
   }
 
