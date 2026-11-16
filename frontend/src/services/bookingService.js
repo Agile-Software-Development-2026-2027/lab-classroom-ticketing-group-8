@@ -293,23 +293,54 @@ export async function createBookingRequest(bookingData) {
   return docRef.id;
 }
 
-export async function getPendingBookingRequests(departmentId) {
+export async function getDepartmentBookingRequests(departmentId, statusFilter = null) {
   if (!departmentId) {
     throw new Error("Dipartimento amministratore non assegnato.");
   }
   const requestsCollection = collection(db, "bookingRequest");
-  const pendingQuery = query(
-    requestsCollection,
-    where("status", "==", "PENDING"),
-    where("department", "==", doc(db, "departments", departmentId))
-  );
-  const snapshot = await getDocs(pendingQuery);
+  const deptRef = doc(db, "departments", departmentId);
+
+  let q;
+  if (statusFilter && statusFilter !== "ALL") {
+    q = query(
+      requestsCollection,
+      where("department", "==", deptRef),
+      where("status", "==", statusFilter)
+    );
+  } else {
+    q = query(
+      requestsCollection,
+      where("department", "==", deptRef)
+    );
+  }
+
+  const snapshot = await getDocs(q);
+  const docs = snapshot?.docs || [];
+
   const requests = await Promise.all(
-    snapshot.docs.map(async (docSnapshot) => {
+    docs.map(async (docSnapshot) => {
       const data = docSnapshot.data();
-      const classroom =
-        data.classroom?.id ||
-        (typeof data.classroom === "string" ? data.classroom : "Aula");
+      let classroom = "Aula";
+      if (data.classroom) {
+        if (typeof data.classroom === "string") {
+          classroom = data.classroom;
+        } else if (data.classroom.id) {
+          try {
+            const classroomDoc = await getDoc(data.classroom);
+            if (classroomDoc && classroomDoc.exists()) {
+              const cData = classroomDoc.data();
+              classroom = cData.name
+                ? `${cData.name}${cData.cubo ? ` (Cubo ${cData.cubo})` : ""}`
+                : data.classroom.id;
+            } else {
+              classroom = data.classroom.id;
+            }
+          } catch {
+            classroom = data.classroom.id;
+          }
+        }
+      }
+
       let professorUniversityId = data.professorUniversityId || "";
       if (!professorUniversityId && data.professor) {
         try {
@@ -318,7 +349,7 @@ export async function getPendingBookingRequests(departmentId) {
               ? doc(db, "users", data.professor)
               : data.professor;
           const profSnapshot = await getDoc(profDocRef);
-          if (profSnapshot.exists()) {
+          if (profSnapshot && profSnapshot.exists()) {
             professorUniversityId =
               profSnapshot.data().universityId || "";
           }
@@ -326,6 +357,7 @@ export async function getPendingBookingRequests(departmentId) {
           professorUniversityId = data.professor?.id || "";
         }
       }
+
       return {
         id: docSnapshot.id,
         classroom,
@@ -334,11 +366,20 @@ export async function getPendingBookingRequests(departmentId) {
         professorUniversityId: professorUniversityId || "N/D",
         startTime: formatTime(data.startsAt || data.startTime),
         endTime: formatTime(data.endsAt || data.endTime),
-        status: data.status,
+        status: data.status || "PENDING",
+        rejectionReason: data.rejectionReason || "",
       };
     })
   );
-  return requests;
+
+  return requests.sort((a, b) => (
+    (a.date || "").localeCompare(b.date || "") ||
+    (a.startTime || "").localeCompare(b.startTime || "")
+  ));
+}
+
+export async function getPendingBookingRequests(departmentId) {
+  return getDepartmentBookingRequests(departmentId, "PENDING");
 }
 
 export async function approveBookingRequest(requestId) {
