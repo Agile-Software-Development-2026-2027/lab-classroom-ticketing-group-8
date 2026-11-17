@@ -72,3 +72,112 @@
   outline: 2px solid #b71e24;
   outline-offset: 3px;
 }
+
+/* MESSAGES */
+.ur-message-success {
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  border-radius: 8px;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+/* CANCEL BUTTON & CONFIRMATION BOX */
+.ur-cancel-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f4f8;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ur-cancel-confirm-box {
+  width: 100%;
+  padding: 14px 16px;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+}
+
+.ur-cancel-confirm-text {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #991b1b;
+}
+
+.ur-cancel-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ur-btn-cancel-request {
+  padding: 8px 16px;
+  background: #ffffff;
+  color: #b71e24;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ur-btn-cancel-request:hover:not(:disabled) {
+  background: #fff1f1;
+  border-color: #b71e24;
+}
+
+.ur-btn-cancel-request:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ur-btn-confirm-delete {
+  padding: 8px 16px;
+  background: #b71e24;
+  color: #ffffff;
+  border: 1px solid #b71e24;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ur-btn-confirm-delete:hover:not(:disabled) {
+  background: #98181e;
+}
+
+.ur-btn-confirm-delete:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ur-btn-dismiss-cancel {
+  padding: 8px 16px;
+  background: #ffffff;
+  color: #4a5568;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.ur-btn-dismiss-cancel:hover:not(:disabled) {
+  background: #edf2f7;
+}
+
+.ur-btn-dismiss-cancel:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

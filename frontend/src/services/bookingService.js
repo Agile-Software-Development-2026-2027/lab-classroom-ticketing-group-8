@@ -10,6 +10,7 @@ import {
   where,
   runTransaction,
   serverTimestamp,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "../firebase/client";
 
@@ -524,6 +525,8 @@ export async function getProfessorBookingRequests(professorId) {
         endTime: formatTime(data.endsAt || data.endTime),
         status: data.status || "PENDING",
         reason: data.rejectionReason,
+        startsAt: data.startsAt || null,
+        endsAt: data.endsAt || null,
       };
     })
   );
@@ -531,4 +534,70 @@ export async function getProfessorBookingRequests(professorId) {
     (b.date || "").localeCompare(a.date || "") ||
     (b.startTime || "").localeCompare(a.startTime || "")
   ));
+}
+
+export function isFutureBooking(booking, now = new Date()) {
+  if (!booking) return false;
+
+  const nowMs = now instanceof Date ? now.getTime() : Number(now);
+
+  if (booking.startsAt?.toDate) {
+    return booking.startsAt.toDate().getTime() > nowMs;
+  }
+  if (booking.startsAt instanceof Date) {
+    return booking.startsAt.getTime() > nowMs;
+  }
+  if (typeof booking.startsAt === "number") {
+    return booking.startsAt > nowMs;
+  }
+
+  const rawStart = booking.startsAt || booking.startTime;
+  if (booking.date && rawStart) {
+    const timeStr = formatTime(rawStart);
+    try {
+      const dt = toRomeDate(booking.date, timeStr);
+      return dt.getTime() > nowMs;
+    } catch {
+      const dt = new Date(`${booking.date}T${timeStr}:00`);
+      return dt.getTime() > nowMs;
+    }
+  }
+
+  return false;
+}
+
+export async function cancelBookingRequest(requestId, professorId = null) {
+  if (!requestId) {
+    throw new Error("ID della richiesta obbligatorio.");
+  }
+
+  const bookingRef = doc(db, "bookingRequest", requestId);
+  const bookingSnapshot = await getDoc(bookingRef);
+
+  if (!bookingSnapshot.exists()) {
+    throw new Error("Richiesta di prenotazione non trovata.");
+  }
+
+  const data = bookingSnapshot.data();
+
+  if (professorId && data.professor) {
+    const profId =
+      data.professor.id ||
+      (typeof data.professor === "string" ? data.professor : null);
+    if (profId && profId !== professorId) {
+      throw new Error("Non sei autorizzato a cancellare questa richiesta.");
+    }
+  }
+
+  if (data.status !== "PENDING" && data.status !== "APPROVED") {
+    throw new Error(
+      "È possibile cancellare solo richieste in attesa o approvate."
+    );
+  }
+
+  if (!isFutureBooking(data)) {
+    throw new Error("Non è possibile cancellare prenotazioni passate.");
+  }
+
+  await deleteDoc(bookingRef);
 }
