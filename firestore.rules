@@ -139,6 +139,11 @@ service cloud.firestore {
             ? ['status', 'rejectionReason']
             : ['status']
         );
+      allow delete: if isProfessor()
+        && resource.data.professor ==
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        && resource.data.status in ['PENDING', 'APPROVED']
+        && resource.data.startsAt > request.time;
     }
     match /{document=**} {
       allow read, write: if false;

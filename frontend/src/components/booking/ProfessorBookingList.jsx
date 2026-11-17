@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/useAuth";
-import { getProfessorBookingRequests } from "../../services/bookingService";
+import {
+  getProfessorBookingRequests,
+  cancelBookingRequest,
+  isFutureBooking,
+} from "../../services/bookingService";
 import "./ProfessorBookingList.css";
 
 const STATUS_LABELS = {
@@ -20,6 +24,9 @@ export default function ProfessorBookingList() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [confirmingCancelId, setConfirmingCancelId] = useState(null);
+  const [processingCancelId, setProcessingCancelId] = useState(null);
+  const [cancelFeedback, setCancelFeedback] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -56,6 +63,28 @@ export default function ProfessorBookingList() {
     };
   }, [user?.uid]);
 
+  async function handleConfirmCancel(requestId) {
+    try {
+      setProcessingCancelId(requestId);
+      setCancelFeedback(null);
+      await cancelBookingRequest(requestId, user?.uid);
+      setRequests((prev) => prev.filter((r) => r.id !== requestId));
+      setConfirmingCancelId(null);
+      setCancelFeedback({
+        type: "success",
+        message: "Richiesta di prenotazione cancellata con successo.",
+      });
+    } catch (err) {
+      setCancelFeedback({
+        type: "error",
+        message:
+          err.message || "Impossibile cancellare la richiesta di prenotazione.",
+      });
+    } finally {
+      setProcessingCancelId(null);
+    }
+  }
+
   return (
     <div className="ur-professor-bookings-section">
       <div className="ur-professor-bookings-header">
@@ -78,6 +107,19 @@ export default function ProfessorBookingList() {
         </div>
       )}
 
+      {cancelFeedback && (
+        <div
+          className={`ur-message ${
+            cancelFeedback.type === "success"
+              ? "ur-message-success"
+              : "ur-message-error"
+          }`}
+          role="alert"
+        >
+          {cancelFeedback.message}
+        </div>
+      )}
+
       {!loading && !error && requests.length === 0 && (
         <div className="ur-empty-state">
           <p>Non hai ancora inviato nessuna richiesta di prenotazione.</p>
@@ -90,6 +132,9 @@ export default function ProfessorBookingList() {
             const statusKey = request.status?.toUpperCase() || "PENDING";
             const statusLabel = STATUS_LABELS[statusKey] || request.status;
             const badgeClass = STATUS_CLASSES[statusKey] || "ur-badge-pending";
+            const canCancel =
+              (statusKey === "PENDING" || statusKey === "APPROVED") &&
+              isFutureBooking(request);
 
             return (
               <li key={request.id} className="ur-request-card">
@@ -134,8 +179,61 @@ export default function ProfessorBookingList() {
                       </span>
                     </div>
                   )}
-                
                 </div>
+
+                {canCancel && (
+                  <div className="ur-cancel-section">
+                    {confirmingCancelId === request.id ? (
+                      <div
+                        className="ur-cancel-confirm-box"
+                        role="alertdialog"
+                        aria-labelledby={`confirm-title-${request.id}`}
+                      >
+                        <p
+                          id={`confirm-title-${request.id}`}
+                          className="ur-cancel-confirm-text"
+                        >
+                          Sei sicuro di voler cancellare questa richiesta di prenotazione? (Sì / No)
+                        </p>
+                        <div className="ur-cancel-confirm-actions">
+                          <button
+                            type="button"
+                            className="ur-btn-confirm-delete"
+                            disabled={processingCancelId === request.id}
+                            onClick={() => handleConfirmCancel(request.id)}
+                          >
+                            {processingCancelId === request.id
+                              ? "Cancellazione..."
+                              : "Sì"}
+                          </button>
+                          <button
+                            type="button"
+                            className="ur-btn-dismiss-cancel"
+                            disabled={processingCancelId === request.id}
+                            onClick={() => {
+                              setConfirmingCancelId(null);
+                              setCancelFeedback(null);
+                            }}
+                          >
+                            No
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="ur-btn-cancel-request"
+                        disabled={processingCancelId !== null}
+                        onClick={() => {
+                          setConfirmingCancelId(request.id);
+                          setCancelFeedback(null);
+                        }}
+                      >
+                        Cancella prenotazione
+                      </button>
+                    )}
+                  </div>
+                )}
               </li>
             );
           })}
