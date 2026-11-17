@@ -382,6 +382,51 @@ jobs:
             --project demo-uniticket44 \
             "cd frontend && npm run test -- src/tests/UNITICKET3-44.rules.test.js"
 
+  view_booking_requests_history_frontend:
+    name: Story 47 - View Booking Requests History Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Story 47 frontend tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET3-47.test.jsx
+
+  view_booking_requests_history_firestore:
+    name: Story 47 - View Booking Requests History Firestore Rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Story 47 Firestore tests
+        env:
+          REQUIRE_FIRESTORE_RULES: "1"
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --only firestore \
+            --project demo-uniticket47 \
+            "cd frontend && npm run test -- src/tests/UNITICKET3-47.rules.test.js"
+
   test:
     needs:
       - build
@@ -402,6 +447,8 @@ jobs:
       - concurrency_booking_firestore
       - booked_classroom_frontend
       - booked_classroom_firestore
+      - view_booking_requests_history_frontend
+      - view_booking_requests_history_firestore
 
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -427,3 +474,5 @@ jobs:
           test "${{ needs.concurrency_booking_firestore.result }}" = "success"
           test "${{ needs.booked_classroom_frontend.result }}" = "success"
           test "${{ needs.booked_classroom_firestore.result }}" = "success"
+          test "${{ needs.view_booking_requests_history_frontend.result }}" = "success"
+          test "${{ needs.view_booking_requests_history_firestore.result }}" = "success"
