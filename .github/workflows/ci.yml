@@ -427,6 +427,51 @@ jobs:
             --project demo-uniticket47 \
             "cd frontend && npm run test -- src/tests/UNITICKET3-47.rules.test.js"
 
+  cancel_booking_request_frontend:
+    name: Story 35 - Cancel Booking Request Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Story 35 frontend tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET3-35.test.jsx
+
+  cancel_booking_request_firestore:
+    name: Story 35 - Cancel Booking Request Firestore Rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Story 35 Firestore tests
+        env:
+          REQUIRE_FIRESTORE_RULES: "1"
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --only firestore \
+            --project demo-uniticket35 \
+            "cd frontend && npm run test -- src/tests/UNITICKET3-35.rules.test.js"
+
   test:
     needs:
       - build
@@ -449,6 +494,8 @@ jobs:
       - booked_classroom_firestore
       - view_booking_requests_history_frontend
       - view_booking_requests_history_firestore
+      - cancel_booking_request_frontend
+      - cancel_booking_request_firestore
 
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -476,3 +523,5 @@ jobs:
           test "${{ needs.booked_classroom_firestore.result }}" = "success"
           test "${{ needs.view_booking_requests_history_frontend.result }}" = "success"
           test "${{ needs.view_booking_requests_history_firestore.result }}" = "success"
+          test "${{ needs.cancel_booking_request_frontend.result }}" = "success"
+          test "${{ needs.cancel_booking_request_firestore.result }}" = "success"
