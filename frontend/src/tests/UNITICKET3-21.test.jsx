@@ -1,5 +1,5 @@
 
- // @vitest-environment jsdom
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
@@ -10,6 +10,14 @@ import { addDoc, collection } from "firebase/firestore";
 vi.mock("../firebase/client", () => ({
   auth: {},
   db: { test: "firestore" },
+}));
+
+vi.mock("../hooks/useDepartmentAccessRequests", () => ({
+  default: () => ({
+    requests: [],
+    loading: false,
+    error: "",
+  }),
 }));
 vi.mock("firebase/firestore", () => ({
   collection: vi.fn((_db, name) => ({ name })),
