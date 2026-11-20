@@ -9,7 +9,10 @@ import useCalendarCatalog from "../hooks/useCalendarCatalog";
 import useDepartmentAccessRequests from "../hooks/useDepartmentAccessRequests";
 import { createDepartmentAccessRequest } from "../services/departmentAccessService";
 import DepartmentAccessProfessor from "../components/booking/DepartmentAccessProfessor";
-
+vi.mock("../firebase/client", () => ({
+    auth: {},
+    db: {},
+}));
 vi.mock("../contexts/useAuth", () => ({ useAuth: vi.fn() }));
 vi.mock("../hooks/useCalendarCatalog", () => ({ default: vi.fn() }));
 vi.mock("../hooks/useDepartmentAccessRequests", () => ({ default: vi.fn() }));
