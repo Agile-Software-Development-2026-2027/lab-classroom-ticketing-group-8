@@ -8,7 +8,7 @@ export async function getUserProfile(uid) {
   if (!snapshot.exists()) {
     throw new Error("Profilo non trovato.");
   }
-  
+
   //console.log("User profile data:", snapshot.data()); user profile data: email,role,displayName,universityId
   return snapshot.data();
 }
