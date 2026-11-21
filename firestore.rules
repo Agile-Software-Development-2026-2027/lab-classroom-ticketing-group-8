@@ -1,21 +1,27 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function isAuthenticated() {
       return request.auth != null;
     }
+
     function userProfile() {
       return get(
         /databases/$(database)/documents/users/$(request.auth.uid)
       ).data;
     }
+
     function isProfessor() {
-      return isAuthenticated() && userProfile().role == 'PROFESSOR';
+      return isAuthenticated()
+        && userProfile().role == 'PROFESSOR';
     }
 
     function isAdmin() {
-      return isAuthenticated() && userProfile().role == 'ADMIN';
+      return isAuthenticated()
+        && userProfile().role == 'ADMIN';
     }
 
     function isAssignedDepartment(departmentRef) {
@@ -30,15 +36,44 @@ service cloud.firestore {
         && exists(reference);
     }
 
+    function hasApprovedDepartmentAccess(departmentRef) {
+      let accessId =
+        request.auth.uid + '_' + departmentRef[4];
+
+      let accessPath =
+        /databases/$(database)/documents/departmentAccessRequests/$(accessId);
+
+      return exists(accessPath)
+        && get(accessPath).data.status == 'APPROVED'
+        && get(accessPath).data.professor ==
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        && get(accessPath).data.department == departmentRef;
+    }
+
+    function canBookDepartment(departmentRef) {
+      return isAssignedDepartment(departmentRef)
+        || (
+          isProfessor()
+          && hasApprovedDepartmentAccess(departmentRef)
+        );
+    }
+
+    // Story 34: validazione degli orari di Ateneo.
     function isDaylightSaving(t) {
       let year = t.year();
+
       let marchSunday =
         31 - (timestamp.date(year, 3, 31).dayOfWeek() % 7);
+
       let octoberSunday =
         31 - (timestamp.date(year, 10, 31).dayOfWeek() % 7);
 
-      return t >= timestamp.date(year, 3, marchSunday) + duration.value(1, 'h')
-        && t < timestamp.date(year, 10, octoberSunday) + duration.value(1, 'h');
+      return t >=
+          timestamp.date(year, 3, marchSunday)
+          + duration.value(1, 'h')
+        && t <
+          timestamp.date(year, 10, octoberSunday)
+          + duration.value(1, 'h');
     }
 
     function toRomeTime(t) {
@@ -49,19 +84,30 @@ service cloud.firestore {
     }
 
     function pad2(number) {
-      return number < 10 ? '0' + string(number) : string(number);
+      return number < 10
+        ? '0' + string(number)
+        : string(number);
     }
 
     function localDateKey(t) {
-      return string(t.year()) + '-' + pad2(t.month()) + '-' + pad2(t.day());
+      return string(t.year()) + '-'
+        + pad2(t.month()) + '-'
+        + pad2(t.day());
     }
 
     function isValidUniversityHours() {
       let data = request.resource.data;
+
       let localStart = toRomeTime(data.startsAt);
       let localEnd = toRomeTime(data.endsAt);
-      let startMinutes = localStart.hours() * 60 + localStart.minutes();
-      let endMinutes = localEnd.hours() * 60 + localEnd.minutes();
+
+      let startMinutes =
+        localStart.hours() * 60
+        + localStart.minutes();
+
+      let endMinutes =
+        localEnd.hours() * 60
+        + localEnd.minutes();
 
       return localDateKey(localStart) == data.date
         && localStart.date() == localEnd.date()
@@ -88,11 +134,12 @@ service cloud.firestore {
         'startsAt',
         'endsAt',
         'status',
-
       ];
 
       return data.keys().hasAll(fields)
-        && data.keys().hasOnly(fields.concat(['rejectionReason']))
+        && data.keys().hasOnly(
+          fields.concat(['rejectionReason'])
+        )
         && isValidReference(data.classroom, 'classrooms')
         && isValidReference(data.department, 'departments')
         && isValidReference(data.professor, 'users')
@@ -105,17 +152,26 @@ service cloud.firestore {
         && data.startsAt is timestamp
         && data.endsAt is timestamp
         && data.startsAt < data.endsAt
-        && data.status in ['PENDING', 'APPROVED', 'REJECTED']
+        && data.status in [
+          'PENDING',
+          'APPROVED',
+          'REJECTED'
+        ]
         && reason is string
         && reason.size() <= 500
-        && (data.status == 'REJECTED'
-          ? reason.trim().size() > 0
-          : reason == '');
+        && (
+          data.status == 'REJECTED'
+            ? reason.trim().size() > 0
+            : reason == ''
+        );
     }
 
     match /users/{userId} {
       allow get: if isAuthenticated()
-        && (request.auth.uid == userId || isAdmin());
+        && (
+          request.auth.uid == userId
+          || isAdmin()
+        );
     }
 
     match /departments/{departmentId} {
@@ -127,31 +183,45 @@ service cloud.firestore {
 
       allow update: if isAdmin()
         && isAssignedDepartment(resource.data.department)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastBookingApproval'])
+        && request.resource.data.diff(
+          resource.data
+        ).affectedKeys().hasOnly([
+          'lastBookingApproval'
+        ])
         && request.resource.data.lastBookingApproval is timestamp;
     }
 
-   
+    // Story 43 + Story 52.
     match /departmentAccessRequests/{requestId} {
 
-      // Il professore legge direttamente i propri documenti.
-      // Funziona anche quando il documento non esiste ancora.
-      allow get: if isProfessor()
-        && requestId.matches('^' + request.auth.uid + '_[^/]+$')
+      // Il professore legge solo le proprie richieste.
+      // L'admin può leggere quelle del suo dipartimento.
+      allow get: if (
+        isProfessor()
+        && requestId.matches(
+          '^' + request.auth.uid + '_[^/]+$'
+        )
         && (
           resource == null
           || (
             resource.data.professor ==
               /databases/$(database)/documents/users/$(request.auth.uid)
             && requestId ==
-              request.auth.uid + '_' + resource.data.department[4]
+              request.auth.uid + '_'
+              + resource.data.department[4]
           )
-        );
+        )
+      ) || (
+        isAdmin()
+        && isAssignedDepartment(resource.data.department)
+      );
 
-      // Non consentiamo letture dell'intera collezione.
-      allow list: if false;
+      // Sono ammesse soltanto query dimostrabilmente
+      // limitate al dipartimento dell'admin.
+      allow list: if isAdmin()
+        && isAssignedDepartment(resource.data.department);
 
-      // Il professore crea esclusivamente richieste PENDING.
+      // Story 43: creazione di una richiesta PENDING.
       allow create: if isProfessor()
         && request.resource.data.keys().hasAll([
           'professor',
@@ -187,15 +257,43 @@ service cloud.firestore {
         && request.resource.data.status == 'PENDING'
         && request.resource.data.createdAt is timestamp
         && requestId ==
-          request.auth.uid + '_' + request.resource.data.department[4];
+          request.auth.uid + '_'
+          + request.resource.data.department[4];
 
-      // Story 52: introdurrà le decisioni dell'admin.
-      allow update, delete: if false;
+      allow update: if isAdmin()
+        && isAssignedDepartment(resource.data.department)
+        && resource.data.status == 'PENDING'
+        && requestId ==
+          resource.data.professor[4] + '_'
+          + resource.data.department[4]
+        && request.resource.data.status in [
+          'APPROVED',
+          'REJECTED'
+        ]
+        && request.resource.data.decidedAt == request.time
+        && request.resource.data.diff(
+          resource.data
+        ).affectedKeys().hasAll([
+          'status',
+          'decidedAt'
+        ])
+        && request.resource.data.diff(
+          resource.data
+        ).affectedKeys().hasOnly([
+          'status',
+          'decidedAt'
+        ]);
+
+      allow delete: if false;
     }
 
     match /bookingRequest/{bookingId} {
+
       allow read: if resource.data.status == 'APPROVED'
-        || (isAdmin() && isAssignedDepartment(resource.data.department))
+        || (
+          isAdmin()
+          && isAssignedDepartment(resource.data.department)
+        )
         || (
           isProfessor()
           && resource.data.professor ==
@@ -205,17 +303,25 @@ service cloud.firestore {
       allow create: if isProfessor()
         && isValidBookingData()
         && isValidUniversityHours()
-        && isAssignedDepartment(request.resource.data.department)
+        && canBookDepartment(
+          request.resource.data.department
+        )
         && request.resource.data.professor ==
           /databases/$(database)/documents/users/$(request.auth.uid)
         && request.resource.data.status == 'PENDING';
 
+      // Regole amministrative delle prenotazioni esistenti.
       allow update: if isAdmin()
         && isAssignedDepartment(resource.data.department)
         && isValidBookingData()
         && resource.data.status == 'PENDING'
-        && request.resource.data.status in ['APPROVED', 'REJECTED']
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+        && request.resource.data.status in [
+          'APPROVED',
+          'REJECTED'
+        ]
+        && request.resource.data.diff(
+          resource.data
+        ).affectedKeys().hasOnly(
           request.resource.data.status == 'REJECTED'
             ? ['status', 'rejectionReason']
             : ['status']
@@ -224,9 +330,13 @@ service cloud.firestore {
       allow delete: if isProfessor()
         && resource.data.professor ==
           /databases/$(database)/documents/users/$(request.auth.uid)
-        && resource.data.status in ['PENDING', 'APPROVED']
+        && resource.data.status in [
+          'PENDING',
+          'APPROVED'
+        ]
         && resource.data.startsAt > request.time;
     }
+
     match /{document=**} {
       allow read, write: if false;
     }
