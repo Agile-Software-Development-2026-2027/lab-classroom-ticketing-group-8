@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import { useAuth } from "../contexts/useAuth";
 import ProfessorBookingList from "../components/booking/ProfessorBookingList";
+import DepartmentAccessProfessor from "../components/booking/DepartmentAccessProfessor";
 
 export default function PersonalPage() {
   const { profile } = useAuth();
@@ -45,6 +46,7 @@ export default function PersonalPage() {
             </Link>
           </div>
           <ProfessorBookingList />
+          <DepartmentAccessProfessor />
         </>
       )}
     </div>
