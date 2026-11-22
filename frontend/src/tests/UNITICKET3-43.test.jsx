@@ -13,6 +13,7 @@ vi.mock("../firebase/client", () => ({
     auth: {},
     db: {},
 }));
+
 vi.mock("../contexts/useAuth", () => ({ useAuth: vi.fn() }));
 vi.mock("../hooks/useCalendarCatalog", () => ({ default: vi.fn() }));
 vi.mock("../hooks/useDepartmentAccessRequests", () => ({ default: vi.fn() }));
