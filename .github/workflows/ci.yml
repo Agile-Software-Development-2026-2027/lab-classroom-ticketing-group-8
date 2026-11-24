@@ -135,6 +135,24 @@ jobs:
         working-directory: frontend
         run: npm run test -- src/tests/UNITICKET3-21.test.jsx
 
+  booking_confirmation_email:
+    name: Story 51 - Booking confirmation email
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run Story 51 email confirmation tests
+        working-directory: frontend
+        run: npm run test -- src/tests/UNITICKET-51.test.js
+
   booking_approval_rejection:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -557,6 +575,7 @@ jobs:
       - admin_booking_requests
       - submit_booking_request
       - booking_approval_rejection
+      - booking_confirmation_email
       - department_frontend
       - department_firestore
       - rejection_reason_frontend
@@ -590,6 +609,7 @@ jobs:
           test "${{ needs.admin_booking_requests.result }}" = "success"
           test "${{ needs.submit_booking_request.result }}" = "success"
           test "${{ needs.booking_approval_rejection.result }}" = "success"
+          test "${{ needs.booking_confirmation_email.result }}" = "success"
           test "${{ needs.department_frontend.result }}" = "success"
           test "${{ needs.department_firestore.result }}" = "success"
           test "${{ needs.rejection_reason_frontend.result }}" = "success"
