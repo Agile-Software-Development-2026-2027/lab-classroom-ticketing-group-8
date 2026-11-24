@@ -33,7 +33,13 @@ vi.mock("firebase/firestore", () => ({
     fromDate: vi.fn((date) => ({ toDate: () => date })),
   },
 }));
-
+vi.mock("../hooks/useDepartmentAccessRequests", () => ({
+  default: () => ({
+    requests: [],
+    loading: false,
+    error: "",
+  }),
+}));
 vi.mock("../firebase/client", () => ({
   auth: {},
   db: { test: "firestore" },

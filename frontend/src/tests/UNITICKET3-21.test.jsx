@@ -19,6 +19,10 @@ vi.mock("../hooks/useDepartmentAccessRequests", () => ({
     error: "",
   }),
 }));
+
+vi.mock("../components/booking/DepartmentAccessAdmin", () => ({
+  default: () => null,
+}));
 vi.mock("firebase/firestore", () => ({
   collection: vi.fn((_db, name) => ({ name })),
   addDoc: vi.fn(),

@@ -526,6 +526,45 @@ jobs:
             --only firestore \
             --project demo-uniticket43 \
             "cd frontend && npm run test -- src/tests/UNITICKET3-43.rules.test.js"
+  story52_frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run test -- src/tests/UNITICKET3-52.test.jsx
+        working-directory: frontend
+
+  story52_firestore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: npm ci
+        working-directory: frontend
+      - name: Run Firestore tests
+        env:
+          REQUIRE_FIRESTORE_RULES: "1"
+        run: |
+          npx --yes firebase-tools emulators:exec \
+            --only firestore \
+            --project demo-uniticket52 \
+            "cd frontend && npm run test -- src/tests/UNITICKET3-52.rules.test.js"
+
+
   test:
     needs:
       - build
@@ -553,6 +592,8 @@ jobs:
       - cancel_booking_request_firestore
       - story43_frontend
       - story43_firestore
+      - story52_frontend
+      - story52_firestore
 
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -585,3 +626,5 @@ jobs:
           test "${{ needs.cancel_booking_request_firestore.result }}" = "success"
           test "${{ needs.story43_frontend.result }}" = "success"
           test "${{ needs.story43_firestore.result }}" = "success"
+          test "${{ needs.story52_frontend.result }}" = "success"
+          test "${{ needs.story52_firestore.result }}" = "success"

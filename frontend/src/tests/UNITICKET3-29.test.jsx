@@ -7,7 +7,13 @@ import BookingRequestForm from "../components/booking/BookingRequestForm";
 import Calendar from "../components/calendar/Calendar";
 import BookingRequests from "../pages/BookingRequests";
 import { getPendingBookingRequests } from "../services/bookingService";
-
+vi.mock("../hooks/useDepartmentAccessRequests", () => ({
+  default: () => ({
+    requests: [],
+    loading: false,
+    error: "",
+  }),
+}));
 vi.mock("../services/calendarService", () => ({
   getCalendarCatalog: vi.fn(async () => ({
     departments: [
