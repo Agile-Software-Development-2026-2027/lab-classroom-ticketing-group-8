@@ -19,8 +19,9 @@ can approve or reject booking requests.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every pull request. It starts empty and always passes: add
-the steps that build and test the project as soon as there is something to test.
+`.github/workflows/ci.yml` runs build, lint, and separate test jobs for the stories on
+pull requests. Story 51 runs the confirmation email tests with mocked Firebase and email
+services, so it needs no EmailJS credentials or emulator.
 
 
 ## Sprint 1 Scope
@@ -77,6 +78,39 @@ The required variables are:
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
 
+
+### EmailJS approval notifications
+
+1. Create an EmailJS account and connect the dedicated sender mailbox as an email service.
+2. Create an approval template. Set its recipient to `{{to_email}}` and use the variables
+   `professor_name`, `classroom_name`, `booking_date`, `start_time`, and `end_time` in its content.
+3. Copy the service ID, approval template ID, and EmailJS Public Key into `frontend/.env.local`:
+
+```env
+VITE_EMAILJS_IS_ACTIVE=false
+VITE_EMAILJS_SERVICE_ID=your_service_id
+VITE_EMAILJS_TEMPLATE_ACCEPTANCE_ID=your_approval_template_id
+VITE_EMAILJS_PUBLIC_KEY=your_public_key
+```
+
+Keep `VITE_EMAILJS_IS_ACTIVE=false` for routine development. Set it to `true` only when
+checking real delivery and restart the development server after changing it. Each local
+environment controls its own setting; for deployment, configure the value before building.
+
+The destination is `contactEmail` in the professor profile at `users/<UID>`. Use the tester's
+real inbox there. The login `email` keeps the `<six-digit-universityId>@uniroom.test` format.
+The Authentication account and the Firestore profile must use the same UID.
+
+The sender mailbox credentials are managed through the EmailJS connection. Keep the actual
+local configuration in the ignored `.env.local`; `.env.example` contains placeholders.
+
+Run the two mocked notification tests from the repository root:
+
+```sh
+npm --prefix frontend run test -- src/tests/UNITICKET-51.test.js
+```
+
+These tests do not send real emails or consume EmailJS requests.
 
 ### 4. Start the Development Server
 

@@ -2,11 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   mockDoc,
+  mockGetDoc,
+  mockSendEmail,
   mockRunTransaction,
   mockTransactionGet,
   mockTransactionUpdate,
 } = vi.hoisted(() => ({
   mockDoc: vi.fn(),
+  mockGetDoc: vi.fn(),
+  mockSendEmail: vi.fn(),
   mockRunTransaction: vi.fn(),
   mockTransactionGet: vi.fn(),
   mockTransactionUpdate: vi.fn(),
@@ -17,11 +21,16 @@ vi.mock("firebase/firestore", () => ({
   addDoc: vi.fn(),
   serverTimestamp: vi.fn(),
   doc: mockDoc,
-  getDoc: vi.fn(),
+  getDoc: mockGetDoc,
   getDocs: vi.fn(),
   query: vi.fn(),
   where: vi.fn(),
   runTransaction: mockRunTransaction,
+}));
+
+// Simuliamo l'invio senza contattare EmailJS.
+vi.mock("../services/emailService", () => ({
+  sendEmailService: mockSendEmail,
 }));
 
 vi.mock("../firebase/client", () => ({
@@ -50,6 +59,30 @@ const transaction = {
 describe("UNITICKET3-23 - Booking approval and rejection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Dopo la transazione leggiamo richiesta, professore e aula per l'email.
+    mockGetDoc.mockReset();
+    mockGetDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({
+          status: "APPROVED",
+          professor: { id: "prof-email" },
+          classroom: { id: "aula-email" },
+          professorName: "Professore Test",
+          date: "2027-01-12",
+          startsAt: "10:00",
+          endsAt: "11:00",
+        }),
+      })
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ contactEmail: "professore@example.com" }),
+      })
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ name: "Aula Test" }),
+      });
+    mockSendEmail.mockResolvedValue({ status: 200, text: "OK" });
 
     mockDoc.mockReturnValue(bookingRef);
 

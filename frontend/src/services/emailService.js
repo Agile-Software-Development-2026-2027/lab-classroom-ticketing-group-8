@@ -17,6 +17,9 @@ to_email: "",
 */
 
 export function sendEmailService(templateId, professor_name, classroom_name, booking_date, start_time, end_time, to_email){
+    if(import.meta.env.VITE_EMAILJS_IS_ACTIVE!= "true"){
+        return Promise.resolve();
+    }
     return emailjs.send(
         serviceId,//email di invio
         templateId,//template
