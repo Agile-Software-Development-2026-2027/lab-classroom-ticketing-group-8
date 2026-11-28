@@ -511,6 +511,35 @@ export async function rejectBookingRequest(requestId, rejectReason) {
       status: "REJECTED",
     });
   });
+
+  // creiamo l'ogettto per inviare l'email dai dati ottenuti tramite ref e snapshot
+  const bookingSnapshot = await getDoc(bookingRef);//fuori da callback bisogna usare getDoc
+  if (!bookingSnapshot.exists()) {
+      throw new Error("Richiesta di prenotazione non trovata.");
+  }
+  const bookingData = bookingSnapshot.data();
+
+  // RIFERIMENTO->SNAPSHOT->DATA, se avessi avuto l'id il ref si trovava con doc(db, nomeDocumento, id)
+  const professorSnapshot= await getDoc( bookingData.professor);
+  if (!professorSnapshot.exists()) {
+      throw new Error("Professore non trovato.");
+  }
+  const professorData=professorSnapshot.data();
+
+  const classroomSnapshot= await getDoc(bookingData.classroom);
+  if (!classroomSnapshot.exists()) {
+      throw new Error("Aula non trovata.");
+  }
+
+  const classroomData=classroomSnapshot.data();
+
+  await sendEmailService(import.meta.env.VITE_EMAILJS_TEMPLATE_REJECTION_ID,
+    bookingData.professorName, 
+    classroomData.name, 
+    bookingData.date, 
+    formatTime(bookingData.startsAt), 
+    formatTime(bookingData.endsAt), 
+    professorData.contactEmail)
 }
 
 export async function getProfessorBookingRequests(professorId) {
